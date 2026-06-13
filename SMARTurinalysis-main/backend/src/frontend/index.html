@@ -58,9 +58,13 @@
 
                 <div class="divider"><span>OR</span></div>
 
+                <div class="button-group" style="margin-bottom: 1rem;">
+                    <button id="btn-scan" class="btn btn-primary" style="background: var(--success);"><span style="margin-right: 0.5rem;">📷</span>Scan Stripe via Camera</button>
+                </div>
+
                 <div id="drop-zone" class="upload-zone">
                     <div class="upload-icon">📸</div>
-                    <p>Drag & drop urine stick photo, or <span class="highlight">browse files</span></p>
+                    <p>Or drag & drop urine stick photo, or <span class="highlight">browse files</span></p>
                     <input type="file" id="file-input" accept="image/*" hidden>
                 </div>
             </section>
@@ -122,6 +126,28 @@
             <p id="loader-text">Processing...</p>
         </div>
     </div>
+
+    <!-- Real-time Scanner Modal -->
+    <div id="scanner-modal" class="scanner-modal hidden">
+        <div class="scanner-content">
+            <div class="scanner-header">
+                <h3>Continuous IA Urine Stripe Scanner</h3>
+                <button id="btn-close-scanner" class="btn-close">&times;</button>
+            </div>
+            <div class="video-container">
+                <video id="scanner-video" autoplay playsinline muted></video>
+                <div class="scanner-overlay-box">
+                    <div class="scanner-laser"></div>
+                </div>
+                <div class="scanner-guide-text">Align reference card & stick within the green guide lines</div>
+            </div>
+            <div class="scanner-status" id="scanner-status-text">
+                Initializing camera...
+            </div>
+        </div>
+    </div>
+    <script src="chart-utils.js"></script>
+    <script src="scanner.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
