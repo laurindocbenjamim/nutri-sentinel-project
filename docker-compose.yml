@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  smarturinalysis:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: smarturinalysis-app
+    ports:
+      - "8000:8000"
+    env_file:
+      - SMARTurinalysis-main/backend/.env
+    volumes:
+      - .:/app
+      # Do not overwrite the container's installed packages with host local venv
+      - /app/.venv
+    restart: unless-stopped

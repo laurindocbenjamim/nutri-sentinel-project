@@ -1,0 +1,29 @@
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Temporary and local outputs
+SMARTurinalysis-main/backend/static/aligned_*.jpg
+SMARTurinalysis-main/backend/static/mock_photo.png
+SMARTurinalysis-main/backend/src/static/mock_photo.png
+tira_sintetica.png
+SMARTurinalysis-main.zip
+.qodo/
