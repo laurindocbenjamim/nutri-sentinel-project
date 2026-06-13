@@ -18,21 +18,56 @@ class UrineDetector:
     Handles detection and perspective warping of the RefCard and UrineStick.
     """
     def __init__(self):
-        # Load template images
+        self._initialized = False
+        self._ref_card = None
+        self._ref_stick = None
+        self.orb = cv2.ORB_create(MAX_FEATURES)
+
+    def _lazy_init(self) -> None:
+        """
+        Lazily loads the template reference images and precomputes ORB keypoints/descriptors.
+        If files do not exist, they are dynamically generated.
+        """
+        if self._initialized:
+            return
+            
         card_file = os.path.join(REF_IMAGES_DIR, "RefCard.jpg")
         stick_file = os.path.join(REF_IMAGES_DIR, "UrineStick.jpg")
         
-        self.ref_card = cv2.imread(card_file)
-        self.ref_stick = cv2.imread(stick_file)
+        if not os.path.exists(card_file) or not os.path.exists(stick_file):
+            from src.domains.synthetic.service import SyntheticGenerator
+            generator = SyntheticGenerator()
+            generator.ensure_templates_exist()
+            
+        self._ref_card = cv2.imread(card_file)
+        self._ref_stick = cv2.imread(stick_file)
         
-        # Precompute ORB keypoints and descriptors for templates
-        self.orb = cv2.ORB_create(MAX_FEATURES)
-        
-        ref_card_gray = cv2.cvtColor(self.ref_card, cv2.COLOR_BGR2GRAY)
+        if self._ref_card is None or self._ref_stick is None:
+            raise FileNotFoundError("Reference card or stick templates could not be loaded.")
+            
+        ref_card_gray = cv2.cvtColor(self._ref_card, cv2.COLOR_BGR2GRAY)
         self.kp_card, self.des_card = self.orb.detectAndCompute(ref_card_gray, None)
         
-        ref_stick_gray = cv2.cvtColor(self.ref_stick, cv2.COLOR_BGR2GRAY)
+        ref_stick_gray = cv2.cvtColor(self._ref_stick, cv2.COLOR_BGR2GRAY)
         self.kp_stick, self.des_stick = self.orb.detectAndCompute(ref_stick_gray, None)
+        
+        self._initialized = True
+
+    @property
+    def ref_card(self) -> np.ndarray:
+        """
+        Property to retrieve ref_card template (triggers lazy initialization).
+        """
+        self._lazy_init()
+        return self._ref_card
+
+    @property
+    def ref_stick(self) -> np.ndarray:
+        """
+        Property to retrieve ref_stick template (triggers lazy initialization).
+        """
+        self._lazy_init()
+        return self._ref_stick
 
     def find_object(self, image: np.ndarray, reference: np.ndarray, good_match_percent: float) -> tuple:
         """

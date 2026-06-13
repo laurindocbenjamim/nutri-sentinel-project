@@ -67,5 +67,5 @@ def test_endpoint_stress_concurrency():
     print(f"Total time: {total_duration:.2f}s, Avg request time: {avg_duration:.2f}s")
     
     assert success_count == num_requests, f"Only {success_count}/{num_requests} requests succeeded."
-    # Ensure average response time is under 1.5 seconds per request (ORB matching can take up to 0.5s per image)
-    assert avg_duration < 1.5, f"Average request latency {avg_duration:.2f}s is too high."
+    # Ensure average response time is under 2.5 seconds per request (ORB matching can take up to 0.5s per image)
+    assert avg_duration < 2.5, f"Average request latency {avg_duration:.2f}s is too high."

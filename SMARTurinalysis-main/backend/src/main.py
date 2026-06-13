@@ -11,6 +11,8 @@ from src.config.config import settings, init_sentry
 from src.domains.synthetic.router import router as synthetic_router
 from src.domains.analysis.router import router as analysis_router
 
+from src.shared.middleware import JWTSessionMiddleware
+
 # Initialize Sentry error tracking
 init_sentry()
 
@@ -19,6 +21,9 @@ app = FastAPI(
     description="Stateless colorimetric urinalysis API with synthetic generation",
     version="1.0.0"
 )
+
+# Register JWT Session Middleware first for session tracking
+app.add_middleware(JWTSessionMiddleware)
 
 # CORS middleware for local frontend development support
 app.add_middleware(

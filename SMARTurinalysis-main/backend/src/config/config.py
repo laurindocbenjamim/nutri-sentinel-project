@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     # Sentry DSN (mocked by default to satisfy SecOps rule)
     SENTRY_DSN: str = ""
 
+    # JWT Session Token Settings
+    JWT_SECRET: str = "supersecretdefaultkeyfortestingonly12345"  # Secret key to sign the JWT session token
+    JWT_ALGORITHM: str = "HS256"  # Cryptographic algorithm for signing the session token
+
 # Instantiate settings
 settings = Settings()
 

@@ -14,3 +14,5 @@ scipy
 scikit-image
 scikit-learn
 joblib
+PyJWT>=2.8.0
+
