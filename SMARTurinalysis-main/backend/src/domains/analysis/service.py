@@ -32,6 +32,15 @@ class AnalysisService:
         if image is None:
             return {"success": False, "error": "Invalid image format"}
 
+        # Sharpness check using Laplacian Variance to detect blur
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        lap_var = cv2.Laplacian(gray, cv2.CV_64F).var()
+        if lap_var < 80.0:
+            return {
+                "success": False,
+                "error": f"Image is too blurry (Sharpness score: {lap_var:.1f}). Please hold the camera steady and recapture."
+            }
+
         # 1. Detect RefCard
         res_card = self.detector.find_object(image, self.detector.ref_card, 0.1)
         if res_card is None or res_card[0] is None:

@@ -55,3 +55,29 @@ def test_full_analysis_pipeline():
     assert "Negative" in results["Glucose"]["value"]
     # Ketone selection was index 4 (Large)
     assert "Large" in results["Ketone"]["value"]
+
+def test_blurry_image_rejection():
+    """
+    Uploads a uniform, solid-colored image (which has 0 Laplacian variance)
+    and asserts that the blur detection intercepts it with a warning.
+    """
+    import numpy as np
+    import cv2
+    
+    # Create a 200x200 solid gray image (variance = 0)
+    blurry_img = np.zeros((200, 200, 3), dtype=np.uint8)
+    blurry_img.fill(128)
+    
+    # Encode as PNG
+    _, img_bytes = cv2.imencode(".png", blurry_img)
+    
+    file_payload = {
+        "file": ("blurry_photo.png", io.BytesIO(img_bytes.tobytes()), "image/png")
+    }
+    
+    # Run request
+    response = client.post("/api/analysis/upload", files=file_payload)
+    assert response.status_code == 422
+    
+    data = response.json()
+    assert "too blurry" in data["detail"]
