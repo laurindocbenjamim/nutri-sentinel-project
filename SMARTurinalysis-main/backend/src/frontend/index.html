@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NutriSentinel - AI Urinalysis Dashboard</title>
+    <link rel="stylesheet" href="index.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">🧬 NutriSentinel</div>
+            <div class="nav-title">SMART Urinalysis</div>
+            <div class="nav-links">
+                <span class="nav-tag">Prenatal Care</span>
+            </div>
+        </div>
+    </nav>
+    <div class="glass-bg-1"></div>
+    <div class="glass-bg-2"></div>
+    <div class="container">
+
+        <main class="grid">
+            <!-- Left Panel: Actions & Synthetic Gen -->
+            <section class="card action-panel">
+                <h2>🧪 Test Bench</h2>
+                <p class="description">Select values below to generate a synthetic test photo, or upload your own.</p>
+                
+                <div class="form-group">
+                    <label for="preset-select">Mock Urine Presets:</label>
+                    <select id="preset-select">
+                        <option value="healthy">Healthy Profile (All Negative/Normal)</option>
+                        <option value="diabetic">Diabetic Profile (High Glucose/Ketone)</option>
+                        <option value="uti">UTI Profile (High Leukocytes/Nitrite)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="eval-time-select">Reaction Time (seconds):</label>
+                    <select id="eval-time-select">
+                        <option value="120">120s (Full Reaction - All Analytes)</option>
+                        <option value="60">60s (Up to Nitrite/pH/Protein)</option>
+                        <option value="45">45s (Up to Specific Gravity)</option>
+                        <option value="40">40s (Up to Ketones)</option>
+                        <option value="30">30s (Glucose & Bilirubin Only)</option>
+                    </select>
+                </div>
+
+                <div id="selection-list" class="scrollable-selections">
+                    <!-- Dynamic selections for analytes will go here -->
+                </div>
+
+                <div class="button-group">
+                    <button id="btn-generate" class="btn btn-primary">Generate Mock Photo</button>
+                    <a id="btn-download" class="btn btn-secondary hidden" download="mock_photo.png">Download Mock Photo</a>
+                </div>
+
+                <div class="divider"><span>OR</span></div>
+
+                <div id="drop-zone" class="upload-zone">
+                    <div class="upload-icon">📸</div>
+                    <p>Drag & drop urine stick photo, or <span class="highlight">browse files</span></p>
+                    <input type="file" id="file-input" accept="image/*" hidden>
+                </div>
+            </section>
+
+            <!-- Right Panel: Results & CV Visualization -->
+            <section class="card results-panel">
+                <h2>📊 Analysis Results</h2>
+                
+                <div id="status-container" class="status-box">
+                    <div class="spinner hidden" id="spinner"></div>
+                    <span id="status-text">Ready. Upload or generate a test to begin.</span>
+                </div>
+
+                <!-- CV Alignment Outputs -->
+                <div id="alignment-visualizer" class="visualizer-grid hidden">
+                    <div class="visual-box">
+                        <h3>Aligned Reference Card</h3>
+                        <img id="img-aligned-card" src="" alt="Aligned Reference Card">
+                    </div>
+                    <div class="visual-box">
+                        <h3>Aligned Urine Stick</h3>
+                        <div class="stick-img-container">
+                            <img id="img-aligned-stick" src="" alt="Aligned Urine Stick">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Grid / Table -->
+                <div id="results-table-container" class="results-table-container hidden">
+                    <div class="table-actions">
+                        <button id="btn-show-chart" class="btn-small btn-secondary">Visualize Chart</button>
+                        <button id="btn-download-csv" class="btn-small btn-secondary">Download CSV</button>
+                    </div>
+
+                    <div id="chart-container" class="chart-container hidden">
+                        <canvas id="analyte-chart" width="600" height="240"></canvas>
+                    </div>
+
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>Analyte</th>
+                                <th>Reading</th>
+                                <th>Stick Color</th>
+                                <th>Match Score</th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-body">
+                            <!-- Dynamic rows loaded by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+    <div id="loader-overlay" class="loader-overlay hidden">
+        <div class="loader-card">
+            <div class="spinner-large"></div>
+            <p id="loader-text">Processing...</p>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
