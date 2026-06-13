@@ -1,0 +1,36 @@
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Environment Variables and secrets
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Project Temporary/Generated Outputs
+SMARTurinalysis-main/backend/static/aligned_*.jpg
+SMARTurinalysis-main/backend/static/mock_photo.png
+SMARTurinalysis-main/backend/src/static/mock_photo.png
+tira_sintetica.png
+*.zip
+*.tar.gz
