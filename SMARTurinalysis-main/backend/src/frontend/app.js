@@ -202,6 +202,25 @@ document.addEventListener("DOMContentLoaded", () => {
         window.downloadCSV(currentResults);
     });
 
+    // Toggle Test Bench Panel
+    const btnTogglePanel = document.getElementById("btn-toggle-panel");
+    const syntheticPanel = document.getElementById("synthetic-panel");
+    const mainGrid = document.getElementById("main-grid");
+    if (btnTogglePanel && syntheticPanel && mainGrid) {
+        btnTogglePanel.addEventListener("click", () => {
+            syntheticPanel.classList.toggle("hidden");
+            mainGrid.classList.toggle("collapsed");
+            
+            if (syntheticPanel.classList.contains("hidden")) {
+                btnTogglePanel.textContent = "🧪 Show Panel";
+                btnTogglePanel.style.borderColor = "rgba(255,255,255,0.15)";
+            } else {
+                btnTogglePanel.textContent = "🧪 Hide Panel";
+                btnTogglePanel.style.borderColor = "var(--accent-hover)";
+            }
+        });
+    }
+
     // Initialize scanner with callbacks
     if (window.initScanner) {
         window.initScanner(renderResults, updateStatus);

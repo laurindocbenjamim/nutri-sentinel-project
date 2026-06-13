@@ -12,7 +12,8 @@
         <div class="nav-container">
             <div class="nav-logo">🧬 NutriSentinel</div>
             <div class="nav-title">SMART Urinalysis</div>
-            <div class="nav-links">
+            <div class="nav-links" style="display: flex; align-items: center;">
+                <button id="btn-toggle-panel" class="btn-toggle" title="Toggle Test Bench">🧪 Hide Panel</button>
                 <span class="nav-tag">Prenatal Care</span>
             </div>
         </div>
@@ -21,9 +22,9 @@
     <div class="glass-bg-2"></div>
     <div class="container">
 
-        <main class="grid">
+        <main class="grid" id="main-grid">
             <!-- Left Panel: Actions & Synthetic Gen -->
-            <section class="card action-panel">
+            <section class="card action-panel" id="synthetic-panel">
                 <h2>🧪 Test Bench</h2>
                 <p class="description">Select values below to generate a synthetic test photo, or upload your own.</p>
                 
