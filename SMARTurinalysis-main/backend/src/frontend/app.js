@@ -52,8 +52,21 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
-    // Default to healthy preset
+    // Session token initialization helper
+    let sessionInitialized = false;
+    const ensureSession = async () => {
+        if (sessionInitialized) return;
+        try {
+            await fetch("/api/session/init", { method: "POST" });
+            sessionInitialized = true;
+        } catch (err) {
+            console.error("Session initialization failed:", err);
+        }
+    };
+
+    // Default to healthy preset and initialize session
     applyPreset("healthy");
+    ensureSession();
     presetSelect.addEventListener("change", (e) => applyPreset(e.target.value));
 
     // Upload & Drag-Drop Listeners
@@ -77,6 +90,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Generate Mock Photo Listener
     document.getElementById("btn-generate").addEventListener("click", async () => {
+        await ensureSession();
         const selections = {};
         for (let i = 0; i < 10; i++) {
             selections[i] = parseInt(document.getElementById(`sel-${i}`).value);
@@ -108,6 +122,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     async function uploadImage(file) {
+        await ensureSession();
         const formData = new FormData();
         formData.append("file", file);
 

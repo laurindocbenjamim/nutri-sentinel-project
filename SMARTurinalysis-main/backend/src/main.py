@@ -34,6 +34,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from fastapi.responses import JSONResponse
+import uuid
+from src.shared.jwt import create_session_token
+
+@app.post("/api/session/init")
+async def init_session():
+    """
+    Initialize a secure session and set the HttpOnly JWT cookie.
+    """
+    session_id = str(uuid.uuid4())
+    token = create_session_token({"session_id": session_id})
+    response = JSONResponse(content={"status": "session_initialized"})
+    response.set_cookie(
+        key="session_token",
+        value=token,
+        httponly=True,
+        samesite="lax",
+        secure=False,
+        path="/"
+    )
+    return response
+
 # Include Bounded Context Domain routers
 app.include_router(synthetic_router)
 app.include_router(analysis_router)

@@ -16,9 +16,10 @@ class JWTSessionMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
         path = request.url.path
         
-        # Bypass validation for OpenAPI schema, docs, and static assets like CSS/JS
+        # Bypass validation for OpenAPI schema, docs, session init, and static assets like CSS/JS
         if (path.startswith("/docs") or 
             path.startswith("/openapi.json") or 
+            path == "/api/session/init" or
             path.endswith(".css") or 
             path.endswith(".js") or 
             path.endswith(".png") or 
