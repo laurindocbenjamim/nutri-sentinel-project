@@ -9,17 +9,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # Set working directory inside the container
 WORKDIR /app
 
-# Install system dependencies required by OpenCV and Python builds
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    libgl1-mesa-glx \
-    libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender-dev \
-    ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
-
 # Copy requirements file first to leverage Docker build cache
 COPY requirements.txt .
 
