@@ -15,4 +15,4 @@ scikit-image
 scikit-learn
 joblib
 PyJWT>=2.8.0
-
+pypdf>=3.17.0
