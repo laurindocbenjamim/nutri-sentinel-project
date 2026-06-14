@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from src.config.config import settings, init_sentry
 from src.domains.synthetic.router import router as synthetic_router
 from src.domains.analysis.router import router as analysis_router
+from src.domains.blood_analysis.router import router as blood_router
 
 from src.shared.middleware import JWTSessionMiddleware
 
@@ -59,6 +60,7 @@ async def init_session():
 # Include Bounded Context Domain routers
 app.include_router(synthetic_router)
 app.include_router(analysis_router)
+app.include_router(blood_router)
 
 # Directories for static assets and frontend UI
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))

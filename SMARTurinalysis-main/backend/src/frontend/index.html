@@ -13,7 +13,9 @@
         <div class="nav-container">
             <div class="nav-logo">🧬 NutriSentinel</div>
             <div class="nav-title">SMART Urinalysis</div>
-            <div class="nav-links" style="display: flex; align-items: center;">
+            <div class="nav-links" style="display: flex; align-items: center; gap: 0.75rem;">
+                <button id="btn-nav-urinalysis" class="nav-btn active">💦 Urinalysis</button>
+                <button id="btn-nav-blood" class="nav-btn">🩸 Blood OCR</button>
                 <button id="btn-toggle-panel" class="btn-toggle" title="Toggle Test Bench">🧪 Hide Panel</button>
                 <span class="nav-tag">Prenatal Care</span>
             </div>
@@ -22,8 +24,9 @@
     <div class="glass-bg-1"></div>
     <div class="glass-bg-2"></div>
     <div class="container">
-
-        <main class="grid" id="main-grid">
+        <!-- Urinalysis View -->
+        <div id="view-urinalysis" class="dashboard-view">
+            <main class="grid" id="main-grid">
             <!-- Left Panel: Actions & Synthetic Gen -->
             <section class="card action-panel" id="synthetic-panel">
                 <h2>🧪 Test Bench</h2>
@@ -121,7 +124,102 @@
                 </div>
             </section>
         </main>
-    </div>
+    </div><!-- end view-urinalysis -->
+
+    <!-- Blood Analysis View -->
+    <div id="view-blood" class="dashboard-view hidden">
+        <main class="grid">
+            <!-- Left Panel: Upload Zone -->
+            <section class="card action-panel">
+                <h2>🩸 Blood Analysis OCR</h2>
+                <p class="description">Upload a clinical blood report (PDF, PNG, or JPEG) to extract, structure, validate, and evaluate health biomarkers using our multi-agent clinical pipeline.</p>
+                
+                <div class="upload-zone" id="blood-upload-zone">
+                    <div class="upload-icon">📄</div>
+                    <p>Drag & drop your blood report here or <span class="highlight">browse</span></p>
+                    <input type="file" id="blood-file-input" accept="application/pdf,image/*" style="display: none;">
+                </div>
+                
+                <div id="blood-file-info" class="hidden" style="margin-top: 1rem; font-size: 0.875rem; color: var(--text-secondary);">
+                    Selected File: <span id="blood-filename" style="color: var(--text-primary); font-weight: 600;"></span>
+                </div>
+
+                <button id="btn-process-blood" class="btn btn-primary" style="margin-top: 1.5rem;" disabled>Start Multi-Agent Analysis</button>
+                
+                <div id="blood-status-box" class="status-box hidden" style="margin-top: 1.5rem; display: flex; align-items: center; gap: 0.75rem;">
+                    <div class="spinner"></div>
+                    <div id="blood-status-text">Uploading file...</div>
+                </div>
+            </section>
+
+            <!-- Right Panel: Results -->
+            <section class="card results-panel">
+                <h2>📊 Extraction Results</h2>
+                
+                <div id="blood-empty-results" class="description" style="text-align: center; padding: 4rem 2rem;">
+                    <span style="font-size: 2.5rem; display: block; margin-bottom: 1rem;">📈</span>
+                    No results loaded yet. Upload a report to start.
+                </div>
+
+                <div id="blood-results-container" class="hidden">
+                    <div class="patient-card" style="background: rgba(255,255,255,0.03); border: var(--glass-border); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+                        <div style="display: flex; gap: 2rem;">
+                            <div><strong style="color: var(--text-secondary);">Patient:</strong> <span id="patient-name-val">-</span></div>
+                            <div><strong style="color: var(--text-secondary);">Report Date:</strong> <span id="report-date-val">-</span></div>
+                        </div>
+                        <button id="btn-download-blood-csv" class="btn-small btn-secondary" title="Download CSV" style="display: flex; align-items: center; gap: 0.25rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 0.35rem 0.75rem; color: var(--text-primary); cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: all 0.2s;">
+                            📥 Download CSV
+                        </button>
+                    </div>
+
+                    <!-- Modern Tabs -->
+                    <div class="tabs-header" style="display: flex; gap: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 1.5rem;">
+                        <button id="tab-blood-results" class="tab-btn active" style="background: transparent; border: none; border-bottom: 2px solid var(--accent); color: var(--text-primary); padding: 0.5rem 1rem; cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: all 0.2s;">📊 Extracted Results</button>
+                        <button id="tab-blood-eval" class="tab-btn" style="background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--text-secondary); padding: 0.5rem 1rem; cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: all 0.2s;">🧠 Agent Evaluation</button>
+                    </div>
+
+                    <!-- Tab 1 content -->
+                    <div id="tab-content-results" class="tab-content-pane">
+                        <!-- Chart -->
+                        <div class="chart-container" style="margin-bottom: 1.5rem; background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; position: relative;">
+                            <canvas id="blood-chart" width="600" height="240" style="width: 100%; height: auto; display: block;"></canvas>
+                            <button id="btn-zoom-chart" class="btn-small btn-secondary" title="Zoom Chart" style="position: absolute; top: 0.5rem; right: 0.5rem; padding: 0.35rem 0.6rem; font-size: 0.8rem; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; color: var(--text-primary); cursor: pointer; display: flex; align-items: center; gap: 0.25rem; z-index: 10;">
+                                🔍 Zoom
+                            </button>
+                        </div>
+
+                        <!-- Results Table -->
+                        <div class="table-wrapper">
+                            <table class="results-table" style="margin-bottom: 1.5rem;">
+                                <thead>
+                                    <tr>
+                                        <th>Biomarker</th>
+                                        <th>Value</th>
+                                        <th>Unit</th>
+                                        <th>Reference Range</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="blood-results-body">
+                                    <!-- Dynamic rows loaded by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2 content -->
+                    <div id="tab-content-eval" class="tab-content-pane hidden">
+                        <!-- AI Recommendations -->
+                        <div class="ai-card" style="background: rgba(14, 165, 233, 0.05); border: 1px solid rgba(14, 165, 233, 0.2); border-radius: 12px; padding: 1.5rem;">
+                            <h3 style="color: var(--accent-hover); font-size: 1.1rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">🧠 Agent Evaluation</h3>
+                            <p id="blood-ai-text" style="font-size: 0.9rem; line-height: 1.6; color: var(--text-primary); white-space: pre-line;"></p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div><!-- end view-blood -->
+</div><!-- end container -->
     <div id="loader-overlay" class="loader-overlay hidden">
         <div class="loader-card">
             <div class="spinner-large"></div>
@@ -151,8 +249,21 @@
             </div>
         </div>
     </div>
+
+    <!-- Chart Zoom Modal -->
+    <div id="chart-zoom-modal" class="modal-overlay hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15,23,42,0.9); display: flex; justify-content: center; align-items: center; z-index: 2000; backdrop-filter: blur(10px);">
+        <div class="modal-card" style="width: 90%; max-width: 800px; background: rgba(30, 41, 59, 0.75); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 2rem; position: relative;">
+            <button id="btn-close-zoom-modal" style="position: absolute; top: 1rem; right: 1rem; background: transparent; border: none; color: var(--text-secondary); font-size: 1.75rem; cursor: pointer; transition: color 0.2s; line-height: 1;">&times;</button>
+            <h3 style="margin-top: 0; margin-bottom: 1.5rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">📊 Biomarker Reference Ranges</h3>
+            <div style="background: rgba(0,0,0,0.3); border-radius: 8px; padding: 1.25rem; overflow: hidden; display: flex; justify-content: center;">
+                <canvas id="blood-chart-zoom" width="800" height="320" style="width: 100%; height: auto; max-width: 100%;"></canvas>
+            </div>
+        </div>
+    </div>
+
     <script src="chart-utils.js"></script>
     <script src="scanner.js"></script>
     <script src="app.js"></script>
+    <script src="blood.js"></script>
 </body>
 </html>

@@ -11,6 +11,31 @@ const PRESETS = {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
+    // Navigation Switching logic
+    const btnNavUrinalysis = document.getElementById("btn-nav-urinalysis");
+    const btnNavBlood = document.getElementById("btn-nav-blood");
+    const viewUrinalysis = document.getElementById("view-urinalysis");
+    const viewBlood = document.getElementById("view-blood");
+    const btnTogglePanel = document.getElementById("btn-toggle-panel");
+
+    if (btnNavUrinalysis && btnNavBlood && viewUrinalysis && viewBlood) {
+        btnNavUrinalysis.addEventListener("click", () => {
+            viewUrinalysis.classList.remove("hidden");
+            viewBlood.classList.add("hidden");
+            btnNavUrinalysis.classList.add("active");
+            btnNavBlood.classList.remove("active");
+            if (btnTogglePanel) btnTogglePanel.classList.remove("hidden");
+        });
+
+        btnNavBlood.addEventListener("click", () => {
+            viewUrinalysis.classList.add("hidden");
+            viewBlood.classList.remove("hidden");
+            btnNavUrinalysis.classList.remove("active");
+            btnNavBlood.classList.add("active");
+            if (btnTogglePanel) btnTogglePanel.classList.add("hidden");
+        });
+    }
+
     const selectionList = document.getElementById("selection-list");
     const presetSelect = document.getElementById("preset-select");
     const dropZone = document.getElementById("drop-zone");
@@ -203,7 +228,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // Toggle Test Bench Panel
-    const btnTogglePanel = document.getElementById("btn-toggle-panel");
     const syntheticPanel = document.getElementById("synthetic-panel");
     const mainGrid = document.getElementById("main-grid");
     if (btnTogglePanel && syntheticPanel && mainGrid) {

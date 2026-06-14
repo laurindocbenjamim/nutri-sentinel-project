@@ -232,6 +232,35 @@ Open your browser and navigate to `http://127.0.0.1:8000` to access the interact
 - `GET /api/synthetic/templates/card` - Returns the `RefCard.jpg` template image.
 - `GET /api/synthetic/templates/stick` - Returns the `UrineStick.jpg` template image.
 
+#### 4. Blood Analysis OCR & Clinical Multi-Agent Pipeline
+- **Endpoint**: `POST /api/blood-analysis/upload`
+- **Description**: Accepts a PDF or image of a blood test report, processes it through a sequential multi-agent pipeline (Extraction -> Structuring -> Validation -> Evaluation), and returns clinical biomarker values, reference ranges, and nutritional recommendations. Uses Groq Llama 4 Scout for image visual OCR.
+- **Request Payload**: `Multipart/form-data` with key `file` containing the PDF/image.
+- **Expected Response**:
+  ```json
+  {
+    "patient_name": "Nuno Diogo Pereira Pinto Oliveira Lopes",
+    "report_date": "23-07-2024",
+    "biomarkers": [
+      {
+        "biomarker": "pH",
+        "value": "7.55",
+        "unit": "",
+        "reference_range": "5.0-9.0",
+        "flag": "Normal"
+      },
+      {
+        "biomarker": "Glicose",
+        "value": "Contém(++)",
+        "unit": "",
+        "reference_range": "",
+        "flag": "Abnormal"
+      }
+    ],
+    "recommendations": "Based on the provided blood report, the patient had several abnormal findings..."
+  }
+  ```
+
 ---
 
 ## 📈 Future Investigations
