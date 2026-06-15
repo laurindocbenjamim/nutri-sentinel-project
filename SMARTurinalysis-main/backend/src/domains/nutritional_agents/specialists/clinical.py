@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from src.domains.nutritional_agents.models import (
     UserProfile, UrinalysisData, Meal, DailyPlan,
     WeeklyPlanPayload, DietSummary, MacroDistribution,
-    FinancialMetrics, AuditorEvaluation, BudgetTier, BudgetStatus, GlycemicLoad,
+    FinancialMetrics, AuditorEvaluation, BudgetTier, BudgetStatus, GlycemicLoad, FastingProtocol
 )
 from src.domains.blood_analysis.agents import call_groq
 import json
@@ -151,7 +151,8 @@ class ClinicalNutritionAgent:
         directives: dict,
         loop_attempt: int = 1,
         blood_data: list[dict] | None = None,
-        notes: str = ""
+        notes: str = "",
+        fasting_protocol: FastingProtocol = FastingProtocol.NONE
     ) -> WeeklyPlanPayload:
         """
         Build and return the full WeeklyPlanPayload incorporating all directives.
@@ -171,24 +172,29 @@ class ClinicalNutritionAgent:
             "blood/urinalysis tests, pathologies, allergies, and specific preferences (notes). "
             "You MUST return the output strictly as a JSON object following this EXACT structure for the `weekly_plan`:\n"
             "{\n"
-            "  'monday': {\n"
-            "    'pequeno_almoco': { 'description': '...', 'ingredients': ['...'], 'allergens_checked': ['...'], 'glycemic_load': 'Baixa'|'Média'|'Alta' },\n"
-            "    'almoco': { ... },\n"
-            "    'lanche': { ... },\n"
-            "    'jantar': { ... }\n"
-            "  },\n"
-            "  'tuesday': { ... },\n"
-            "  'wednesday': { ... },\n"
-            "  'thursday': { ... },\n"
-            "  'friday': { ... },\n"
-            "  'saturday': { ... },\n"
-            "  'sunday': { ... }\n"
+            "  'notes_explanation': 'A clear explanation in Portuguese of why certain user notes (e.g. food requests) were included or rejected based on clinical rules/allergies.',\n"
+            "  'weekly_plan': {\n"
+            "    'monday': {\n"
+            "      'pequeno_almoco': { 'description': '...', 'ingredients': ['...'], 'allergens_checked': ['...'], 'glycemic_load': 'Baixa'|'Média'|'Alta' },\n"
+            "      'almoco': { ... },\n"
+            "      'lanche': { ... },\n"
+            "      'jantar': { ... }\n"
+            "    },\n"
+            "    'tuesday': { ... },\n"
+            "    'wednesday': { ... },\n"
+            "    'thursday': { ... },\n"
+            "    'friday': { ... },\n"
+            "    'saturday': { ... },\n"
+            "    'sunday': { ... }\n"
+            "  }\n"
             "}\n"
-            "CRITICAL:\n"
-            "1. Output ONLY valid JSON, no markdown, no explanation.\n"
-            "2. All keys must be exactly as shown in english (monday, pequeno_almoco, etc.).\n"
-            "3. The values (descriptions and ingredients) MUST be in Portuguese.\n"
-            "4. Respect all allergies and pathologies! Ensure meals are safe and nutritionally balanced."
+            "CRITICAL RULES:\n"
+            "1. Output ONLY valid JSON, no markdown, no explanation outside the JSON.\n"
+            "2. All keys must be exactly as shown in english (notes_explanation, weekly_plan, monday, pequeno_almoco, etc.).\n"
+            "3. The values (descriptions, ingredients, notes_explanation) MUST be in Portuguese.\n"
+            "4. Respect all allergies and pathologies! Ensure meals are safe and nutritionally balanced.\n"
+            "5. FASTING: If a fasting protocol is active (e.g. 16/8), adjust the meals (e.g., make 'pequeno_almoco' just 'Água, chá ou café preto sem açúcar', and distribute calories in the remaining meals).\n"
+            "6. NOTES EXPLANATION: If the user requests foods like 'peas' or 'bread' in their notes, and you choose to omit them due to allergies or diet constraints, you MUST explain why in the `notes_explanation` field."
         )
 
         user_prompt = (
@@ -204,13 +210,16 @@ class ClinicalNutritionAgent:
             f"\nSpecialist Directives: {json.dumps(directives)}\n"
             f"Urinalysis Data: {urinalysis_data.model_dump_json()}\n"
             f"Blood Data: {json.dumps(blood_data) if blood_data else 'None'}\n"
+            f"Fasting Protocol: {fasting_protocol.value}\n"
             f"\nUser Dietary Notes / Preferences: {notes if notes else 'None'}\n"
         )
 
         try:
             # For JSON mode we must use a compatible model. llama-3.1-8b-instant supports it well in Groq.
             res = call_groq(user_prompt, system_prompt, json_mode=True, model="llama-3.1-8b-instant")
-            weekly_plan_dict = json.loads(res)
+            res_dict = json.loads(res)
+            weekly_plan_dict = res_dict.get("weekly_plan", res_dict) # Fallback if LLM forgets wrapper
+            notes_explanation = res_dict.get("notes_explanation", "")
             
             weekly = {}
             for day in DAYS:
@@ -224,6 +233,7 @@ class ClinicalNutritionAgent:
         except Exception as e:
             logger.error(f"LLM Diet Generation failed: {e}. Falling back to default templates.")
             weekly = _build_base_menu(directives, profile)
+            notes_explanation = "Erro ao gerar explicação personalizada (Fallback ativado)."
 
         estimated_cost = _WEEKLY_COST_ESTIMATES.get(profile.budget_tier, Decimal("70.00"))
 
@@ -241,6 +251,7 @@ class ClinicalNutritionAgent:
                     proteins_g=adjusted["proteins_g"],
                     fats_g=adjusted["fats_g"],
                 ),
+                notes_explanation=notes_explanation,
             ),
             financial_metrics=FinancialMetrics(
                 user_budget_tier=profile.budget_tier,

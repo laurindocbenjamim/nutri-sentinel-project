@@ -14,7 +14,7 @@ from src.domains.nutritional_agents.router_agent import RouterAgent
 from src.domains.nutritional_agents.specialists.clinical import ClinicalNutritionAgent
 from src.domains.nutritional_agents.auditor import AuditorAgent
 from src.domains.nutritional_agents.models import (
-    UrinalysisData, TriageStatus, NutritionPlanResponse, TriageResult,
+    UrinalysisData, TriageStatus, NutritionPlanResponse, TriageResult, FastingProtocol
 )
 
 router = APIRouter(prefix="/api/nutrition", tags=["Nutritional Agents WS"])
@@ -52,38 +52,63 @@ async def nutrition_ws(ws: WebSocket):
         blood_data = payload.get("blood_data")
         user_id = payload.get("user_id", "anonymous")
         notes = payload.get("notes", "")
+        fasting_raw = payload.get("fasting_protocol", "none")
+        
+        try:
+            fasting_protocol = FastingProtocol(fasting_raw)
+        except ValueError:
+            fasting_protocol = FastingProtocol.NONE
 
         # Build UrinalysisData from the incoming dict
         urinalysis_data = UrinalysisData(**urinalysis_dict)
 
-        # ── Step 1: Gatekeeper ────────────────────────────────────────────────
+        # ── Step 1: Router / DB (Fetch Profile First) ─────────────────────────
         await _send(ws, "progress", {
-            "step": 1, "label": "🛡️ Gatekeeper: Analysing clinical markers...", "percent": 10
+            "step": 1, "label": "🔍 Router: Fetching clinical profile from database...", "percent": 10
+        })
+        router_agent = RouterAgent()
+        profile = await router_agent.fetch_clinical_profile(user_id)
+        
+        # ── Apply Clinical Overrides ──
+        overrides = payload.get("clinical_overrides", {})
+        if overrides.get("pregnancy"):
+            profile.pregnancy = True
+        if overrides.get("cancer"):
+            profile.pathologies.append("Cancro (Oncologia)")
+        if overrides.get("other_risk"):
+            profile.pathologies.append("Doença de Alto Risco")
+
+        await _send(ws, "progress", {
+            "step": 1,
+            "label": f"✅ Router: Profile loaded — {len(profile.pathologies)} pathologies, {len(profile.allergies)} allergies.",
+            "percent": 20
+        })
+
+        # ── Step 2: Gatekeeper ────────────────────────────────────────────────
+        await _send(ws, "progress", {
+            "step": 2, "label": "🛡️ Gatekeeper: Analysing clinical markers & safety rules...", "percent": 30
         })
         await asyncio.sleep(0.3)
 
-        triage = GatekeeperAgent().validate_thresholds(urinalysis_data)
+        gatekeeper = GatekeeperAgent()
+        
+        # 2a. Validate fasting protocol against profile
+        fasting_alert = gatekeeper.validate_fasting(profile, fasting_protocol)
+        if fasting_alert:
+            await _send(ws, "emergency", {"alert": fasting_alert.model_dump()})
+            await _send(ws, "done", {})
+            return
+
+        # 2b. Validate urinalysis thresholds
+        triage = gatekeeper.validate_thresholds(urinalysis_data)
         if triage == TriageStatus.EMERGENCY_LOCK:
-            alert = GatekeeperAgent().trigger_emergency_lock()
+            alert = gatekeeper.trigger_emergency_lock()
             await _send(ws, "emergency", {"alert": alert.model_dump()})
             await _send(ws, "done", {})
             return
 
         await _send(ws, "progress", {
-            "step": 1, "label": "✅ Gatekeeper: All markers within safe limits.", "percent": 20
-        })
-
-        # ── Step 2: Router / DB ───────────────────────────────────────────────
-        await _send(ws, "progress", {
-            "step": 2, "label": "🔍 Router: Fetching clinical profile from database...", "percent": 30
-        })
-        router_agent = RouterAgent()
-        profile = await router_agent.fetch_clinical_profile(user_id)
-
-        await _send(ws, "progress", {
-            "step": 2,
-            "label": f"✅ Router: Profile loaded — {len(profile.pathologies)} pathologies, {len(profile.allergies)} allergies.",
-            "percent": 40
+            "step": 2, "label": "✅ Gatekeeper: All markers within safe limits.", "percent": 40
         })
 
         # ── Step 3: Specialist agents ─────────────────────────────────────────
@@ -113,7 +138,7 @@ async def nutrition_ws(ws: WebSocket):
                 "label": f"🍽️ Clinical Agent: Generating 7-day meal plan (attempt {attempt}/{_MAX_LOOPS})...",
                 "percent": 65 + (attempt - 1) * 8
             })
-            plan = clinical.structure_weekly_menu(urinalysis_data, profile, directives, attempt, blood_data, notes)
+            plan = clinical.structure_weekly_menu(urinalysis_data, profile, directives, attempt, blood_data, notes, fasting_protocol)
 
             await _send(ws, "progress", {
                 "step": 5,

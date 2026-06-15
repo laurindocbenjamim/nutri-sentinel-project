@@ -204,6 +204,20 @@ function renderPlan(plan) {
   const disc = (plan.metadata || {}).legal_disclaimer || "";
   if (disc) el("nutr-disclaimer").textContent = disc;
 
+  // Notes explanation
+  const expBox = el("nutr-notes-explanation-box");
+  const expText = el("nutr-notes-explanation-text");
+  if (expBox && expText) {
+    if (summary.notes_explanation && summary.notes_explanation.trim() !== "") {
+      expText.textContent = summary.notes_explanation;
+      expBox.classList.remove("hidden");
+      expBox.style.display = "block";
+    } else {
+      expBox.classList.add("hidden");
+      expBox.style.display = "none";
+    }
+  }
+
   show("nutr-results-section");
 
   // Build full-text for download
@@ -256,7 +270,7 @@ function downloadPlanTxt() {
 
 function downloadPlanCSV() {
   const plan = window._currentPlan;
-  if (!plan || !plan.weekly_plan) return alert("No plan generated.");
+  if (!plan || !plan.weekly_plan) return window.showModernAlert("No plan generated.");
   let csv = "Day,Meal,Description,Ingredients,Allergens Checked,Glycemic Load\n";
   const days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
   days.forEach(day => {
@@ -281,12 +295,16 @@ function downloadPlanCSV() {
 
 function downloadPlanPDF() {
   const plan = window._currentPlan;
-  if (!plan) return alert("No plan generated.");
-  if (!window.jspdf || !window.jspdf.jsPDF || !window.jspdf.jsPDF.prototype.autoTable) {
-    return alert("PDF engine loading, please try again in a few seconds.");
+  if (!plan) return window.showModernAlert("No plan generated.");
+  
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    return window.showModernAlert("PDF engine loading or failed to load. Please try again or refresh the page.");
   }
   
   const doc = new window.jspdf.jsPDF();
+  if (typeof doc.autoTable !== 'function') {
+    return window.showModernAlert("PDF autoTable plugin not loaded. Please try again in a few seconds.");
+  }
   
   // Header: Application Info
   doc.setFont("helvetica", "bold");
@@ -487,15 +505,28 @@ function startNutritionPipeline(urinalysis, bloodData, userId) {
   updateProgress(5, "🔌 Connecting to agent pipeline...", 1);
 
   ws.onopen = () => {
-    // Send the combined source payload + notes
+    // Send the combined source payload + notes + fasting
     const notesEl = el("nutr-input-notes");
     const notes = notesEl ? notesEl.value.trim() : "";
+    
+    const fastingRadio = document.querySelector('input[name="fasting_protocol"]:checked');
+    const fastingProtocol = fastingRadio ? fastingRadio.value : "none";
+    
+    const isPregnant = el("nutr-chk-pregnant")?.checked || false;
+    const hasCancer = el("nutr-chk-cancer")?.checked || false;
+    const hasOtherRisk = el("nutr-chk-other-risk")?.checked || false;
     
     ws.send(JSON.stringify({ 
       urinalysis: urinalysis || {}, 
       blood_data: bloodData, 
       user_id: userId,
-      notes: notes 
+      notes: notes,
+      fasting_protocol: fastingProtocol,
+      clinical_overrides: {
+        pregnancy: isPregnant,
+        cancer: hasCancer,
+        other_risk: hasOtherRisk
+      }
     }));
   };
 
@@ -563,22 +594,29 @@ window.initNutritionView = (function () {
     }
 
     // Determine the combined urinalysis pipeline object to show
-    // Prefer urine dipstick if available, else fallback to mapped blood biomarkers
+    // Prefer urine dipstick if available
     let primaryUrinalysis = null;
+    let hasRealUrineData = false;
     if (data.urine && data.urine.urinalysis) {
       primaryUrinalysis = data.urine.urinalysis;
+      hasRealUrineData = true;
     } else if (data.blood && data.blood.urinalysis) {
       primaryUrinalysis = data.blood.urinalysis;
     }
 
     const summaryEl = el("nutr-input-summary");
-    if (summaryEl && primaryUrinalysis) {
-      const u = primaryUrinalysis;
-      el("nutr-in-glucose").textContent  = u.Glucose  || "—";
-      el("nutr-in-ketone").textContent   = u.Ketone   || "—";
-      el("nutr-in-protein").textContent  = u.Protein  || "—";
-      el("nutr-in-ph").textContent       = u.pHValue  || "—";
-      el("nutr-in-density").textContent  = u.SpecificGravity || "—";
+    if (summaryEl) {
+      if (hasRealUrineData && primaryUrinalysis) {
+        summaryEl.style.display = "block";
+        const u = primaryUrinalysis;
+        el("nutr-in-glucose").textContent  = u.Glucose  || "—";
+        el("nutr-in-ketone").textContent   = u.Ketone   || "—";
+        el("nutr-in-protein").textContent  = u.Protein  || "—";
+        el("nutr-in-ph").textContent       = u.pHValue  || "—";
+        el("nutr-in-density").textContent  = u.SpecificGravity || "—";
+      } else {
+        summaryEl.style.display = "none";
+      }
 
       // Full blood biomarker cards
       const oldSection = el("nutr-blood-section");

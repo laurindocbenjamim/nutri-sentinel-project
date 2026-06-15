@@ -246,8 +246,49 @@
                     📡 <span id="nutr-source-label"></span>
                 </div>
 
+                <!-- Fasting Protocol -->
+                <div style="margin-bottom:1.5rem; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:1rem; border-radius:8px;">
+                    <h3 style="font-size:0.9rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Fasting Protocol</h3>
+                    <div style="display:flex; flex-direction:column; gap:0.5rem; color:var(--text-primary); font-size:0.9rem;">
+                        <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                            <input type="radio" name="fasting_protocol" value="none" checked> No Fasting
+                        </label>
+                        <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                            <input type="radio" name="fasting_protocol" value="12/12"> Intermittent Fasting (12/12)
+                        </label>
+                        <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                            <input type="radio" name="fasting_protocol" value="16/8"> Intermittent Fasting (16/8)
+                        </label>
+                        <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                            <input type="radio" name="fasting_protocol" value="24/48"> Prolonged Fasting (24h - 48h)
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Clinical Risk Factors (Overrides) -->
+                <div style="margin-bottom:1.5rem; background:rgba(239,68,68,0.05); border:1px solid rgba(239,68,68,0.2); padding:1rem; border-radius:8px;">
+                    <h3 style="font-size:0.9rem;color:#f87171;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Clinical Risk Factors</h3>
+                    <div style="display:flex; flex-direction:column; gap:0.5rem; color:var(--text-primary); font-size:0.9rem;">
+                        <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                            <input type="checkbox" id="nutr-chk-pregnant"> Pregnant (Gestante)
+                        </label>
+                        <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                            <input type="checkbox" id="nutr-chk-cancer"> Cancer / Oncological Condition
+                        </label>
+                        <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                            <input type="checkbox" id="nutr-chk-other-risk"> Other high-risk diseases
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Notes Textarea -->
+                <div style="margin-bottom:1.5rem;">
+                    <h3 style="font-size:0.9rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Dietary Notes / Preferences (Optional)</h3>
+                    <textarea id="nutr-input-notes" rows="4" placeholder="Add any specific requests, e.g. 'I want more fish' or 'Prefer light dinners'..." style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:0.75rem;color:var(--text-primary);font-family:inherit;font-size:0.9rem;resize:vertical;outline:none;transition:border-color 0.2s;"></textarea>
+                </div>
+
                 <!-- Input Summary Boxes -->
-                <div id="nutr-input-summary" class="hidden" style="margin-bottom:1.5rem;">
+                <div id="nutr-input-summary" style="display:none; margin-bottom:1.5rem;">
                     <h3 style="font-size:0.9rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Clinical Input Data</h3>
                     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.75rem;">
                         <div class="nutr-input-box"><div class="nutr-box-label">Glucose</div><div class="nutr-box-val" id="nutr-in-glucose">—</div></div>
@@ -258,11 +299,6 @@
                     </div>
                 </div>
 
-                <!-- Notes Textarea -->
-                <div style="margin-bottom:1.5rem;">
-                    <h3 style="font-size:0.9rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Dietary Notes / Preferences (Optional)</h3>
-                    <textarea id="nutr-input-notes" rows="4" placeholder="Add any specific requests, e.g. 'I want more fish' or 'Prefer light dinners'..." style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:0.75rem;color:var(--text-primary);font-family:inherit;font-size:0.9rem;resize:vertical;outline:none;transition:border-color 0.2s;"></textarea>
-                </div>
             </section>
 
             <!-- RIGHT PANEL: Progress & Results -->
@@ -307,11 +343,19 @@
                     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:0.75rem;margin-bottom:2rem;">
                         <div class="nutr-result-box"><div class="nutr-box-label">Diet Type</div><div class="nutr-box-val nutr-highlight" id="nutr-diet-type">—</div></div>
                         <div class="nutr-result-box"><div class="nutr-box-label">Daily Calories</div><div class="nutr-box-val nutr-highlight" id="nutr-calories">—</div></div>
-                        <div class="nutr-result-box"><div class="nutr-box-label">Carbohydrates</div><div class="nutr-box-val" id="nutr-carbs">—</div></div>
-                        <div class="nutr-result-box"><div class="nutr-box-label">Protein</div><div class="nutr-box-val" id="nutr-protein">—</div></div>
+                        <div class="nutr-result-box"><div class="nutr-box-label">Carbs</div><div class="nutr-box-val gl-medium" id="nutr-carbs">—</div></div>
+                        <div class="nutr-result-box"><div class="nutr-box-label">Protein</div><div class="nutr-box-val gl-low" id="nutr-protein">—</div></div>
                         <div class="nutr-result-box"><div class="nutr-box-label">Fat</div><div class="nutr-box-val" id="nutr-fat">—</div></div>
                         <div class="nutr-result-box"><div class="nutr-box-label">Budget Tier</div><div class="nutr-box-val" id="nutr-budget-tier">—</div></div>
-                        <div class="nutr-result-box"><div class="nutr-box-label">Weekly Cost</div><div class="nutr-box-val nutr-highlight" id="nutr-weekly-cost">—</div></div>
+                        <div class="nutr-result-box"><div class="nutr-box-label">Est. Cost</div><div class="nutr-box-val" id="nutr-weekly-cost">—</div></div>
+                    </div>
+
+                    <!-- Notes Explanation Box -->
+                    <div id="nutr-notes-explanation-box" class="hidden" style="margin-top:1.5rem; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); border-radius:8px; padding:1rem; border-left:4px solid #38bdf8;">
+                        <h4 style="font-size:0.85rem; color:#38bdf8; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.5rem; display:flex; align-items:center; gap:0.4rem;">
+                            💡 AI Dietary Reasoning
+                        </h4>
+                        <p id="nutr-notes-explanation-text" style="font-size:0.95rem; color:var(--text-primary); line-height:1.5; margin:0;"></p>
                     </div>
 
                     <!-- Weekly Plan Tabs -->
@@ -386,10 +430,48 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 
+    <!-- Custom Alert Modal -->
+    <div id="custom-alert-modal" class="modal-overlay hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15,23,42,0.8); display: flex; justify-content: center; align-items: center; z-index: 9999; backdrop-filter: blur(5px); opacity: 0; transition: opacity 0.3s ease;">
+        <div class="modal-card" style="width: 90%; max-width: 400px; background: rgba(30, 41, 59, 0.95); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 2rem; position: relative; text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.3); transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+            <div style="font-size: 3rem; margin-bottom: 1rem; color: #38bdf8;">🔔</div>
+            <h3 style="margin-top: 0; margin-bottom: 1rem; color: var(--text-primary); font-size: 1.25rem;">Notification</h3>
+            <p id="custom-alert-message" style="color: var(--text-secondary); margin-bottom: 2rem; font-size: 1rem; line-height: 1.5;"></p>
+            <button id="btn-close-custom-alert" class="btn btn-primary" style="background: var(--accent); color: white; padding: 0.75rem 2rem; font-weight: 600; border-radius: 8px;">OK</button>
+        </div>
+    </div>
+
+    <script>
+        window.showModernAlert = function(msg) {
+            const modal = document.getElementById('custom-alert-modal');
+            const msgEl = document.getElementById('custom-alert-message');
+            const card = modal.querySelector('.modal-card');
+            if (modal && msgEl) {
+                msgEl.textContent = msg;
+                modal.classList.remove('hidden');
+                // Trigger reflow
+                void modal.offsetWidth;
+                modal.style.opacity = '1';
+                card.style.transform = 'scale(1)';
+            } else {
+                alert(msg); // Fallback
+            }
+        };
+
+        document.getElementById('btn-close-custom-alert')?.addEventListener('click', function() {
+            const modal = document.getElementById('custom-alert-modal');
+            const card = modal.querySelector('.modal-card');
+            if (modal) {
+                modal.style.opacity = '0';
+                card.style.transform = 'scale(0.95)';
+                setTimeout(() => modal.classList.add('hidden'), 300);
+            }
+        });
+    </script>
+
     <script src="chart-utils.js?v=1.0.3"></script>
     <script src="scanner.js?v=1.0.3"></script>
     <script src="app.js?v=1.0.3"></script>
     <script src="blood.js?v=1.0.3"></script>
-    <script src="nutrition.js?v=1.0.8"></script>
+    <script src="nutrition.js?v=1.0.12"></script>
 </body>
 </html>

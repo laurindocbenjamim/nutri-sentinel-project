@@ -41,6 +41,13 @@ class GlycemicLoad(str, Enum):
     HIGH = "Alta"
 
 
+class FastingProtocol(str, Enum):
+    NONE = "none"
+    INTERMITTENT_12_12 = "12/12"
+    INTERMITTENT_16_8 = "16/8"
+    PROLONGED_24_48 = "24/48"
+
+
 # ─── Input Models ─────────────────────────────────────────────────────────────
 
 class UrinalysisData(BaseModel):
@@ -110,6 +117,7 @@ class DietSummary(BaseModel):
     diet_type: str
     target_calories_kcal: int
     macro_distribution: MacroDistribution
+    notes_explanation: str = ""
 
 
 class FinancialMetrics(BaseModel):

@@ -10,6 +10,8 @@ from src.domains.nutritional_agents.models import (
     UrinalysisData,
     TriageResult,
     TriageStatus,
+    UserProfile,
+    FastingProtocol,
 )
 
 # Categorical severity map for string-based markers (e.g., dipstick readings)
@@ -64,7 +66,40 @@ class GatekeeperAgent:
     """
     Agent 1 — Triagem e Emergência Médica.
     Validates urinalysis markers against hard clinical thresholds.
+    Also validates fasting protocols against clinical profiles.
     """
+
+    def validate_fasting(self, profile: UserProfile, fasting_protocol: FastingProtocol) -> TriageResult | None:
+        """
+        Check if the requested fasting protocol is clinically safe for the user.
+        Blocks if pregnant, diabetic, or has an eating disorder.
+        Returns a TriageResult(EMERGENCY_LOCK) if blocked, otherwise None.
+        """
+        if fasting_protocol == FastingProtocol.NONE:
+            return None
+
+        # Check conditions
+        pathologies_lower = [p.lower() for p in profile.pathologies]
+        
+        is_diabetic = any("diabet" in p for p in pathologies_lower)
+        has_eating_disorder = any("distúrbio" in p or "anorexia" in p or "bulimia" in p for p in pathologies_lower)
+        has_cancer_or_risk = any("cancro" in p or "oncologia" in p or "alto risco" in p for p in pathologies_lower)
+        
+        if profile.pregnancy or is_diabetic or has_eating_disorder or has_cancer_or_risk:
+            reason = "gravidez" if profile.pregnancy else "diabetes" if is_diabetic else "condição oncológica/alto risco" if has_cancer_or_risk else "histórico de distúrbio alimentar"
+            msg = (
+                f"⚠️ BLOQUEIO CLÍNICO: Protocolos de jejum não são indicados para o seu perfil "
+                f"devido a {reason}. Risco elevado de complicações. "
+                f"Por favor, desative a opção de jejum ou consulte o seu médico."
+            )
+            return TriageResult(
+                triagem=TriageStatus.EMERGENCY_LOCK,
+                action="ABORT_DIET",
+                alert_message=msg,
+                helpline=_EMERGENCY_HELPLINE,
+            )
+            
+        return None
 
     def validate_thresholds(self, data: UrinalysisData) -> TriageStatus:
         """
