@@ -35,10 +35,22 @@ class Settings(BaseSettings):
     JWT_SECRET: str = "supersecretdefaultkeyfortestingonly12345"  # Secret key to sign the JWT session token
     JWT_ALGORITHM: str = "HS256"  # Cryptographic algorithm for signing the session token
 
+    # Cookie Security
+    SECURE_COOKIE: bool = False
+
+    # MongoDB Configuration
+    MONGODB_URI: str = ""
+    MONGODB_DB_NAME: str = "nutrisentinel_agent_ai"
+    MONGODB_COLLECTION: str = "analysis"
+
     # LLM Configuration
     LLM_PROVIDER: str = "groq"
     LLM_MODEL: str = "llama-3.1-8b-instant"
     GROQ_API_KEY: str = ""
+    GROQ_STT_MODEL: str = "whisper-large-v3"
+
+    # Gemini Configuration
+    GEMINI_API_KEY: str = ""
 
 # Instantiate settings
 settings = Settings()

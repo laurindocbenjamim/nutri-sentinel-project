@@ -179,5 +179,15 @@ document.addEventListener("DOMContentLoaded", () => {
         if (window.drawBloodChart) {
             window.drawBloodChart(data.biomarkers);
         }
+
+        // Wire the Send to Nutrition AI button
+        const btnBloodToNutr = document.getElementById("btn-blood-to-nutrition");
+        if (btnBloodToNutr) {
+            btnBloodToNutr.onclick = () => {
+                if (window.sendBloodToNutrition) {
+                    window.sendBloodToNutrition(currentBloodData);
+                }
+            };
+        }
     }
 });

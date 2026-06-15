@@ -4,6 +4,7 @@ Bootstrap server, configures CORS, Sentry, and serves the frontend.
 """
 
 import os
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -11,6 +12,16 @@ from src.config.config import settings, init_sentry
 from src.domains.synthetic.router import router as synthetic_router
 from src.domains.analysis.router import router as analysis_router
 from src.domains.blood_analysis.router import router as blood_router
+from src.domains.nutritional_agents.router import router as nutrition_router
+from src.domains.nutritional_agents.ws_router import router as nutrition_ws_router
+from src.shared.database import close_client
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application startup and shutdown lifecycle."""
+    yield
+    await close_client()
 
 from src.shared.middleware import JWTSessionMiddleware
 
@@ -20,7 +31,8 @@ init_sentry()
 app = FastAPI(
     title=settings.APP_NAME,
     description="Stateless colorimetric urinalysis API with synthetic generation",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 # Register JWT Session Middleware first for session tracking
@@ -61,6 +73,8 @@ async def init_session():
 app.include_router(synthetic_router)
 app.include_router(analysis_router)
 app.include_router(blood_router)
+app.include_router(nutrition_router)
+app.include_router(nutrition_ws_router)
 
 # Directories for static assets and frontend UI
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))

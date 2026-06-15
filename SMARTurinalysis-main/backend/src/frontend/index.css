@@ -582,4 +582,103 @@ select {
     to { transform: rotate(360deg); }
 }
 
+/* ── Nutritional Agents View ─────────────────────────────────────────────── */
+
+/* Pipeline step indicators */
+.pipeline-step {
+    display: flex; flex-direction: column; align-items: center; gap: 0.35rem;
+    padding: 0.5rem 0.75rem; border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+    transition: all 0.3s ease;
+    min-width: 72px; font-size: 0.72rem; color: var(--text-secondary);
+}
+.pipeline-step .step-icon { font-size: 1.4rem; }
+.pipeline-step .step-label { font-weight: 600; text-align: center; line-height: 1.2; }
+.pipeline-step.active {
+    border-color: var(--accent);
+    background: rgba(14,165,233,0.12);
+    color: var(--accent-hover);
+    box-shadow: 0 0 14px rgba(14,165,233,0.25);
+    transform: translateY(-2px);
+}
+.pipeline-step.done {
+    border-color: rgba(16,185,129,0.4);
+    background: rgba(16,185,129,0.07);
+    color: var(--success);
+}
+.pipe-connector {
+    width: 24px; height: 2px;
+    background: rgba(255,255,255,0.1);
+    flex-shrink: 0;
+}
+
+/* Input & Result boxes */
+.nutr-input-box, .nutr-result-box {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px; padding: 0.85rem 1rem;
+    transition: border-color 0.2s;
+}
+.nutr-input-box:hover, .nutr-result-box:hover { border-color: rgba(14,165,233,0.3); }
+.nutr-box-label {
+    font-size: 0.7rem; color: var(--text-secondary);
+    text-transform: uppercase; letter-spacing: 0.07em;
+    margin-bottom: 0.35rem; font-weight: 600;
+}
+.nutr-box-val {
+    font-size: 1.05rem; font-weight: 700; color: var(--text-primary);
+}
+.nutr-result-box .nutr-highlight { color: var(--accent-hover); }
+
+/* Day tabs */
+.nutr-day-tab {
+    padding: 0.4rem 0.9rem; border-radius: 6px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-secondary); font-size: 0.82rem; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; font-family: inherit;
+}
+.nutr-day-tab:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.2); }
+.nutr-day-tab.active {
+    background: rgba(14,165,233,0.15);
+    border-color: var(--accent); color: var(--accent-hover);
+}
+
+/* Meals grid */
+.meals-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem;
+}
+.meal-block {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px; padding: 1rem;
+    transition: border-color 0.2s, transform 0.2s;
+}
+.meal-block:hover { border-color: rgba(14,165,233,0.3); transform: translateY(-2px); }
+.meal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+.meal-label { font-weight: 700; font-size: 0.85rem; color: var(--accent-hover); }
+.meal-desc { font-size: 0.875rem; line-height: 1.5; color: var(--text-primary); margin-bottom: 0.75rem; }
+.meal-ingredients { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.6rem; }
+.ingredient-chip {
+    background: rgba(14,165,233,0.1); border: 1px solid rgba(14,165,233,0.2);
+    color: var(--accent-hover); font-size: 0.72rem; font-weight: 600;
+    padding: 0.15rem 0.55rem; border-radius: 99px;
+}
+.meal-allergens { font-size: 0.72rem; color: var(--text-secondary); }
+
+/* Glycemic badges */
+.glycemic-badge {
+    font-size: 0.65rem; font-weight: 700; padding: 0.15rem 0.45rem;
+    border-radius: 4px; text-transform: uppercase;
+}
+.glycemic-badge.gllow   { background: rgba(16,185,129,0.15); color: var(--success); border: 1px solid rgba(16,185,129,0.3); }
+.glycemic-badge.glmedium { background: rgba(234,179,8,0.15); color: #fbbf24; border: 1px solid rgba(234,179,8,0.3); }
+.glycemic-badge.glhigh  { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+
+/* Blood status badge in results table */
+.status-badge { padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.78rem; font-weight: 700; }
+.status-badge.normal  { background: rgba(16,185,129,0.15); color: var(--success); }
+.status-badge.high    { background: rgba(239,68,68,0.15); color: #f87171; }
+.status-badge.low     { background: rgba(234,179,8,0.15); color: #fbbf24; }
 

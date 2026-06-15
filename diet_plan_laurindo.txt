@@ -1,0 +1,44 @@
+
+[1/4] 📄 Reading PDF: unilabs results 3.pdf
+    ✓ Extraction complete (2281 chars)
+    ✓ Structuring complete: 17 biomarkers found
+    ✓ Evaluation complete for patient: Laurindo Chiteculo Benjamim
+
+[2/4] 🍃 Seeding user profile in MongoDB (user_id=test_user_laurindo)
+    ✓ Profile seeded: {
+  "user_id": "test_user_laurindo",
+  "activity_level": "moderado",
+  "age": 32,
+  "allergies": [],
+  "budget_tier": "Medio",
+  "goal": "manter_peso",
+  "medications": [],
+  "pathologies": [],
+  "pregnancy": false,
+  "sex": "M"
+}
+
+[3/4] 🔬 Mapping 17 biomarkers to UrinalysisData fields
+    ✓ Mapped data: {"Glucose": "Negative", "Ketone": "Negative", "Protein": "Negative", "Leukocytes": "4.4803.31", "Nitrite": "Negative", "pHValue": 7.0, "SpecificGravity": 1.015}
+
+[4/4] 🤖 Running Nutritional Agents pipeline (user_id=test_user_laurindo)
+
+════════════════════════════════════════════════════════════
+✅ PLAN APPROVED after audit
+   Diet type  : Equilibrada
+   Calories   : 3100 kcal/day
+   Macros     : Carbs=387g | Protein=193g | Fat=86g
+   Budget     : BudgetTier.MEDIUM — ~70.00€/week
+
+📅 Weekly Plan (Monday sample):
+  PEQUENO_ALMOCO  : Papas de aveia com bebida de amêndoa, banana e sementes de girassol.
+                    Ingredients: aveia, bebida de amêndoa, banana, sementes de girassol
+  ALMOCO          : Peito de frango grelhado com arroz basmati, brócolos e azeite.
+                    Ingredients: peito de frango, arroz basmati, brócolos, azeite
+  LANCHE          : Iogurte sem lactose com nozes e morangos.
+                    Ingredients: iogurte sem lactose, nozes, morangos
+  JANTAR          : Posta de salmão assado com batata-doce e salada de pepino.
+                    Ingredients: salmão, batata-doce, pepino, alface, azeite
+
+⚠️ AVISO LEGAL: Este plano alimentar é gerado por IA e tem caráter meramente informativo. Não substitui a consulta com um médico ou nutricionista. Verifique sempre os rótulos dos produtos no supermercado para confirmar a certificação 'Sem Glúten' e a ausência de alérgenos declarados.
+════════════════════════════════════════════════════════════

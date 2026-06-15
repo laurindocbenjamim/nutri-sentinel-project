@@ -16,3 +16,10 @@ scikit-learn
 joblib
 PyJWT>=2.8.0
 pypdf>=3.17.0
+# Nutritional Agents dependencies
+google-cloud-aiplatform>=1.50.0
+langgraph>=0.1.0
+pandas>=2.0.0
+motor>=3.3.0
+
+

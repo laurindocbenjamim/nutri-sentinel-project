@@ -16,6 +16,7 @@
             <div class="nav-links" style="display: flex; align-items: center; gap: 0.75rem;">
                 <button id="btn-nav-urinalysis" class="nav-btn active">💦 Urinalysis</button>
                 <button id="btn-nav-blood" class="nav-btn">🩸 Blood OCR</button>
+                <button id="btn-nav-nutrition" class="nav-btn">🥗 Nutrition AI</button>
                 <button id="btn-toggle-panel" class="btn-toggle" title="Toggle Test Bench">🧪 Hide Panel</button>
                 <span class="nav-tag">Prenatal Care</span>
             </div>
@@ -102,6 +103,7 @@
                     <div class="table-actions">
                         <button id="btn-show-chart" class="btn-small btn-secondary">Visualize Chart</button>
                         <button id="btn-download-csv" class="btn-small btn-secondary">Download CSV</button>
+                        <button id="btn-urine-to-nutrition" class="btn-small" style="background:linear-gradient(135deg,#16a34a,#0ea5e9);color:#fff;border:none;border-radius:6px;padding:0.35rem 0.9rem;font-weight:600;cursor:pointer;font-size:0.8rem;">🥗 Send to Nutrition AI</button>
                     </div>
 
                     <div id="chart-container" class="chart-container hidden">
@@ -167,9 +169,10 @@
                             <div><strong style="color: var(--text-secondary);">Patient:</strong> <span id="patient-name-val">-</span></div>
                             <div><strong style="color: var(--text-secondary);">Report Date:</strong> <span id="report-date-val">-</span></div>
                         </div>
-                        <button id="btn-download-blood-csv" class="btn-small btn-secondary" title="Download CSV" style="display: flex; align-items: center; gap: 0.25rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 0.35rem 0.75rem; color: var(--text-primary); cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: all 0.2s;">
-                            📥 Download CSV
-                        </button>
+                        <div style="display:flex;gap:0.5rem;align-items:center;">
+                            <button id="btn-blood-to-nutrition" style="background:linear-gradient(135deg,#16a34a,#0ea5e9);color:#fff;border:none;border-radius:6px;padding:0.4rem 1rem;font-weight:700;cursor:pointer;font-size:0.82rem;">🥗 Send to Nutrition AI</button>
+                            <button id="btn-download-blood-csv" class="btn-small btn-secondary" title="Download CSV" style="display: flex; align-items: center; gap: 0.25rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 0.35rem 0.75rem; color: var(--text-primary); cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: all 0.2s;">📥 Download CSV</button>
+                        </div>
                     </div>
 
                     <!-- Modern Tabs -->
@@ -219,6 +222,94 @@
             </section>
         </main>
     </div><!-- end view-blood -->
+
+    <!-- Nutritional Agents View -->
+    <div id="view-nutrition" class="dashboard-view hidden">
+        <main class="grid" style="grid-template-columns:1fr;max-width:1100px;margin:0 auto;">
+            <section class="card" style="padding:2rem;">
+
+                <!-- Header -->
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
+                    <div>
+                        <h2 style="margin:0;font-size:1.5rem;">🥗 Nutritional Agents Pipeline</h2>
+                        <p class="description" style="margin:0.25rem 0 0;">AI-powered 7-day personalised diet, generated from your clinical data.</p>
+                    </div>
+                    <div style="display:flex;gap:0.75rem;">
+                        <button id="nutr-btn-generate" class="btn btn-primary" style="background:linear-gradient(135deg,#16a34a,#0ea5e9);">⚡ Generate Diet</button>
+                        <button id="nutr-btn-download" class="btn btn-secondary" disabled>📥 Download .txt</button>
+                    </div>
+                </div>
+
+                <!-- Source Banner -->
+                <div id="nutr-source-banner" class="hidden" style="background:rgba(14,165,233,0.08);border:1px solid rgba(14,165,233,0.25);border-radius:8px;padding:0.6rem 1rem;margin-bottom:1.5rem;font-size:0.85rem;color:var(--accent-hover);">
+                    📡 <span id="nutr-source-label"></span>
+                </div>
+
+                <!-- Input Summary Boxes -->
+                <div id="nutr-input-summary" class="hidden" style="margin-bottom:1.5rem;">
+                    <h3 style="font-size:0.9rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Clinical Input Data</h3>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.75rem;">
+                        <div class="nutr-input-box"><div class="nutr-box-label">Glucose</div><div class="nutr-box-val" id="nutr-in-glucose">—</div></div>
+                        <div class="nutr-input-box"><div class="nutr-box-label">Ketone</div><div class="nutr-box-val" id="nutr-in-ketone">—</div></div>
+                        <div class="nutr-input-box"><div class="nutr-box-label">Protein</div><div class="nutr-box-val" id="nutr-in-protein">—</div></div>
+                        <div class="nutr-input-box"><div class="nutr-box-label">pH</div><div class="nutr-box-val" id="nutr-in-ph">—</div></div>
+                        <div class="nutr-input-box"><div class="nutr-box-label">Specific Gravity</div><div class="nutr-box-val" id="nutr-in-density">—</div></div>
+                    </div>
+                </div>
+
+                <!-- Progress Section -->
+                <div id="nutr-progress-section" class="hidden" style="margin-bottom:2rem;">
+                    <h3 style="font-size:0.9rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:1rem;">Agent Pipeline</h3>
+
+                    <!-- Step indicators -->
+                    <div id="nutr-pipeline-steps" style="display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:1.5rem;flex-wrap:wrap;"></div>
+
+                    <!-- Progress bar -->
+                    <div style="background:rgba(255,255,255,0.07);border-radius:99px;height:10px;overflow:hidden;margin-bottom:0.6rem;">
+                        <div id="nutr-progress-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#16a34a,#0ea5e9);border-radius:99px;transition:width 0.5s ease;"></div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--text-secondary);">
+                        <span id="nutr-progress-label">Initialising...</span>
+                        <span id="nutr-progress-pct">0%</span>
+                    </div>
+                </div>
+
+                <!-- Emergency Block -->
+                <div id="nutr-emergency-section" class="hidden" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.4);border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;">
+                    <h3 style="color:#f87171;margin:0 0 0.75rem;">⚠️ Emergency Medical Alert</h3>
+                    <p id="nutr-emergency-msg" style="margin:0 0 0.5rem;line-height:1.6;"></p>
+                    <p style="margin:0;font-weight:700;color:#fca5a5;">📞 <span id="nutr-emergency-helpline"></span></p>
+                </div>
+
+                <!-- Results Section -->
+                <div id="nutr-results-section" class="hidden">
+
+                    <!-- Summary Metric Boxes -->
+                    <h3 style="font-size:0.9rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Diet Summary</h3>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:0.75rem;margin-bottom:2rem;">
+                        <div class="nutr-result-box"><div class="nutr-box-label">Diet Type</div><div class="nutr-box-val nutr-highlight" id="nutr-diet-type">—</div></div>
+                        <div class="nutr-result-box"><div class="nutr-box-label">Daily Calories</div><div class="nutr-box-val nutr-highlight" id="nutr-calories">—</div></div>
+                        <div class="nutr-result-box"><div class="nutr-box-label">Carbohydrates</div><div class="nutr-box-val" id="nutr-carbs">—</div></div>
+                        <div class="nutr-result-box"><div class="nutr-box-label">Protein</div><div class="nutr-box-val" id="nutr-protein">—</div></div>
+                        <div class="nutr-result-box"><div class="nutr-box-label">Fat</div><div class="nutr-box-val" id="nutr-fat">—</div></div>
+                        <div class="nutr-result-box"><div class="nutr-box-label">Budget Tier</div><div class="nutr-box-val" id="nutr-budget-tier">—</div></div>
+                        <div class="nutr-result-box"><div class="nutr-box-label">Weekly Cost</div><div class="nutr-box-val nutr-highlight" id="nutr-weekly-cost">—</div></div>
+                    </div>
+
+                    <!-- Weekly Plan Tabs -->
+                    <h3 style="font-size:0.9rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">7-Day Meal Plan</h3>
+                    <div id="nutr-day-tabs" style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:1rem;"></div>
+                    <div id="nutr-day-content"></div>
+
+                    <!-- Legal Disclaimer -->
+                    <div style="margin-top:2rem;background:rgba(234,179,8,0.07);border:1px solid rgba(234,179,8,0.25);border-radius:8px;padding:1rem;font-size:0.8rem;line-height:1.6;color:var(--text-secondary);">
+                        <span id="nutr-disclaimer"></span>
+                    </div>
+                </div>
+
+            </section>
+        </main>
+    </div><!-- end view-nutrition -->
 </div><!-- end container -->
     <div id="loader-overlay" class="loader-overlay hidden">
         <div class="loader-card">
@@ -265,5 +356,6 @@
     <script src="scanner.js?v=1.0.3"></script>
     <script src="app.js?v=1.0.3"></script>
     <script src="blood.js?v=1.0.3"></script>
+    <script src="nutrition.js?v=1.0.0"></script>
 </body>
 </html>

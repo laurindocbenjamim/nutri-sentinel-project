@@ -19,21 +19,35 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnTogglePanel = document.getElementById("btn-toggle-panel");
 
     if (btnNavUrinalysis && btnNavBlood && viewUrinalysis && viewBlood) {
+        const viewNutrition = document.getElementById("view-nutrition");
+        const btnNavNutrition = document.getElementById("btn-nav-nutrition");
+        const allViews = [viewUrinalysis, viewBlood, viewNutrition].filter(Boolean);
+        const allBtns  = [btnNavUrinalysis, btnNavBlood, btnNavNutrition].filter(Boolean);
+
+        function switchView(activeView, activeBtn) {
+            allViews.forEach(v => v.classList.add("hidden"));
+            allBtns.forEach(b => b.classList.remove("active"));
+            activeView.classList.remove("hidden");
+            activeBtn.classList.add("active");
+        }
+
         btnNavUrinalysis.addEventListener("click", () => {
-            viewUrinalysis.classList.remove("hidden");
-            viewBlood.classList.add("hidden");
-            btnNavUrinalysis.classList.add("active");
-            btnNavBlood.classList.remove("active");
+            switchView(viewUrinalysis, btnNavUrinalysis);
             if (btnTogglePanel) btnTogglePanel.classList.remove("hidden");
         });
 
         btnNavBlood.addEventListener("click", () => {
-            viewUrinalysis.classList.add("hidden");
-            viewBlood.classList.remove("hidden");
-            btnNavUrinalysis.classList.remove("active");
-            btnNavBlood.classList.add("active");
+            switchView(viewBlood, btnNavBlood);
             if (btnTogglePanel) btnTogglePanel.classList.add("hidden");
         });
+
+        if (btnNavNutrition && viewNutrition) {
+            btnNavNutrition.addEventListener("click", () => {
+                switchView(viewNutrition, btnNavNutrition);
+                if (btnTogglePanel) btnTogglePanel.classList.add("hidden");
+                if (window.initNutritionView) window.initNutritionView();
+            });
+        }
     }
 
     const selectionList = document.getElementById("selection-list");
@@ -226,6 +240,16 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!currentResults) return;
         window.downloadCSV(currentResults);
     });
+
+    // ── Send urinalysis results to Nutrition AI ──────────────────────────────
+    const btnUrineToNutr = document.getElementById("btn-urine-to-nutrition");
+    if (btnUrineToNutr) {
+        btnUrineToNutr.addEventListener("click", () => {
+            if (currentResults && window.sendUrinalysisToNutrition) {
+                window.sendUrinalysisToNutrition(currentResults);
+            }
+        });
+    }
 
     // Toggle Test Bench Panel
     const syntheticPanel = document.getElementById("synthetic-panel");
