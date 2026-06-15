@@ -11,7 +11,7 @@ from src.config.config import settings
 
 logger = logging.getLogger("nutri-sentinel")
 
-def call_groq(prompt: str, system_prompt: str, json_mode: bool = False, model: str = None, image_url: str = None) -> str:
+def call_groq(prompt: str, system_prompt: str, json_mode: bool = False, model: str = None, image_url: str = None, max_tokens: int = None) -> str:
     """Calls Groq's Chat Completions API with support for text and vision models."""
     if not settings.GROQ_API_KEY:
         logger.warning("GROQ_API_KEY is not set. Returning mock JSON response.")
@@ -44,6 +44,9 @@ def call_groq(prompt: str, system_prompt: str, json_mode: bool = False, model: s
             {"role": "user", "content": user_content}
         ]
     }
+    if max_tokens is not None:
+        payload["max_tokens"] = max_tokens
+
     if json_mode:
         payload["response_format"] = {"type": "json_object"}
     try:

@@ -13,6 +13,10 @@ from src.domains.nutritional_agents.gatekeeper import GatekeeperAgent
 from src.domains.nutritional_agents.router_agent import RouterAgent
 from src.domains.nutritional_agents.specialists.clinical import ClinicalNutritionAgent
 from src.domains.nutritional_agents.auditor import AuditorAgent
+from src.domains.subscriptions.database import get_db_session
+from src.domains.subscriptions.service import SubscriptionService
+from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import Depends
 from src.domains.nutritional_agents.models import (
     UrinalysisData, TriageStatus, NutritionPlanResponse, TriageResult, FastingProtocol
 )
@@ -29,7 +33,10 @@ async def _send(ws: WebSocket, event: str, payload: dict) -> None:
 
 
 @router.websocket("/ws/generate")
-async def nutrition_ws(ws: WebSocket):
+async def nutrition_ws(
+    ws: WebSocket,
+    db_session: AsyncSession = Depends(get_db_session)
+):
     """
     WebSocket endpoint that streams agent pipeline progress.
 
@@ -49,10 +56,19 @@ async def nutrition_ws(ws: WebSocket):
         payload = json.loads(raw)
 
         urinalysis_dict = payload.get("urinalysis", {})
-        blood_data = payload.get("blood_data")
-        user_id = payload.get("user_id", "anonymous")
+        user_id = payload.get("user_id", "test_user_laurindo")
+        blood_data = payload.get("blood_data", [])
         notes = payload.get("notes", "")
         fasting_raw = payload.get("fasting_protocol", "none")
+        language = payload.get("language", "English")
+
+        # Quota check
+        sub_service = SubscriptionService(db_session)
+        has_quota = await sub_service.check_and_consume_quota(user_id)
+        if not has_quota:
+            await _send(ws, "error", {"message": "Quota Exceeded. Please upgrade your plan to generate more nutritional reports."})
+            await _send(ws, "done", {})
+            return
         
         try:
             fasting_protocol = FastingProtocol(fasting_raw)
@@ -138,7 +154,9 @@ async def nutrition_ws(ws: WebSocket):
                 "label": f"🍽️ Clinical Agent: Generating 7-day meal plan (attempt {attempt}/{_MAX_LOOPS})...",
                 "percent": 65 + (attempt - 1) * 8
             })
-            plan = clinical.structure_weekly_menu(urinalysis_data, profile, directives, attempt, blood_data, notes, fasting_protocol)
+            plan = clinical.structure_weekly_menu(
+                urinalysis_data, profile, directives, attempt, blood_data, notes, fasting_protocol, language
+            )
 
             await _send(ws, "progress", {
                 "step": 5,

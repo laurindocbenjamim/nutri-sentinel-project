@@ -18,6 +18,12 @@
                 <button id="btn-nav-blood" class="nav-btn">🩸 Blood OCR</button>
                 <button id="btn-nav-nutrition" class="nav-btn">🥗 Nutrition AI</button>
                 <button id="btn-toggle-panel" class="btn-toggle" title="Toggle Test Bench">🧪 Hide Panel</button>
+                <select id="test-user-select" style="background: var(--bg-dark); color: var(--text-primary); border: 1px solid var(--border-color); padding: 4px 8px; border-radius: 4px; font-size: 0.85rem; outline: none;">
+                    <option value="">Auto (Random UUID)</option>
+                    <option value="uuid-free-user">Free Plan (1 daily)</option>
+                    <option value="uuid-pro-user">Pro Plan (10 daily)</option>
+                    <option value="uuid-enterprise-user">Enterprise Plan (1000 daily)</option>
+                </select>
                 <span class="nav-tag">Prenatal Care</span>
             </div>
         </div>
@@ -287,6 +293,33 @@
                     <textarea id="nutr-input-notes" rows="4" placeholder="Add any specific requests, e.g. 'I want more fish' or 'Prefer light dinners'..." style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:0.75rem;color:var(--text-primary);font-family:inherit;font-size:0.9rem;resize:vertical;outline:none;transition:border-color 0.2s;"></textarea>
                 </div>
 
+                <!-- Language Selection -->
+                <div style="margin-bottom:1.5rem;">
+                    <h3 style="font-size:0.9rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Output Language</h3>
+                    <select id="nutr-lang-select" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:0.75rem;color:var(--text-primary);font-family:inherit;font-size:0.9rem;outline:none;appearance:none;cursor:pointer;">
+                        <option value="English" style="background:#1e293b;">🇬🇧 English (Default)</option>
+                        <option value="Portuguese" style="background:#1e293b;">🇵🇹 Portuguese (Português)</option>
+                        <option value="Spanish" style="background:#1e293b;">🇪🇸 Spanish (Español)</option>
+                        <option value="French" style="background:#1e293b;">🇫🇷 French (Français)</option>
+                        <option value="German" style="background:#1e293b;">🇩🇪 German (Deutsch)</option>
+                        <option value="Italian" style="background:#1e293b;">🇮🇹 Italian (Italiano)</option>
+                        <option value="Dutch" style="background:#1e293b;">🇳🇱 Dutch (Nederlands)</option>
+                        <option value="Russian" style="background:#1e293b;">🇷🇺 Russian (Русский)</option>
+                        <option value="Mandarin Chinese" style="background:#1e293b;">🇨🇳 Mandarin (中文)</option>
+                        <option value="Japanese" style="background:#1e293b;">🇯🇵 Japanese (日本語)</option>
+                        <option value="Korean" style="background:#1e293b;">🇰🇷 Korean (한국어)</option>
+                        <option value="Hindi" style="background:#1e293b;">🇮🇳 Hindi (हिन्दी)</option>
+                        <option value="Arabic" style="background:#1e293b;">🇸🇦 Arabic (العربية)</option>
+                        <option value="Turkish" style="background:#1e293b;">🇹🇷 Turkish (Türkçe)</option>
+                        <option value="Swedish" style="background:#1e293b;">🇸🇪 Swedish (Svenska)</option>
+                        <option value="Polish" style="background:#1e293b;">🇵🇱 Polish (Polski)</option>
+                        <option value="Vietnamese" style="background:#1e293b;">🇻🇳 Vietnamese (Tiếng Việt)</option>
+                        <option value="Thai" style="background:#1e293b;">🇹🇭 Thai (ไทย)</option>
+                        <option value="Indonesian" style="background:#1e293b;">🇮🇩 Indonesian (Bahasa Indonesia)</option>
+                        <option value="Greek" style="background:#1e293b;">🇬🇷 Greek (Ελληνικά)</option>
+                    </select>
+                </div>
+
                 <!-- Input Summary Boxes -->
                 <div id="nutr-input-summary" style="display:none; margin-bottom:1.5rem;">
                     <h3 style="font-size:0.9rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Clinical Input Data</h3>
@@ -340,7 +373,7 @@
                             <button id="nutr-btn-dl-txt" class="btn btn-secondary" style="padding:0.4rem 0.8rem;font-size:0.8rem;">📥 TXT</button>
                         </div>
                     </div>
-                    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:0.75rem;margin-bottom:2rem;">
+                    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:0.75rem;margin-bottom:1.5rem;">
                         <div class="nutr-result-box"><div class="nutr-box-label">Diet Type</div><div class="nutr-box-val nutr-highlight" id="nutr-diet-type">—</div></div>
                         <div class="nutr-result-box"><div class="nutr-box-label">Daily Calories</div><div class="nutr-box-val nutr-highlight" id="nutr-calories">—</div></div>
                         <div class="nutr-result-box"><div class="nutr-box-label">Carbs</div><div class="nutr-box-val gl-medium" id="nutr-carbs">—</div></div>
@@ -348,6 +381,14 @@
                         <div class="nutr-result-box"><div class="nutr-box-label">Fat</div><div class="nutr-box-val" id="nutr-fat">—</div></div>
                         <div class="nutr-result-box"><div class="nutr-box-label">Budget Tier</div><div class="nutr-box-val" id="nutr-budget-tier">—</div></div>
                         <div class="nutr-result-box"><div class="nutr-box-label">Est. Cost</div><div class="nutr-box-val" id="nutr-weekly-cost">—</div></div>
+                    </div>
+
+                    <!-- Clinical Summary Box -->
+                    <div id="nutr-clinical-summary-box" class="hidden" style="margin-bottom:2rem; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:8px; padding:1rem; border-left:4px solid #10b981;">
+                        <h4 style="font-size:0.85rem; color:#10b981; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.5rem; display:flex; align-items:center; gap:0.4rem;">
+                            🩺 Clinical Summary
+                        </h4>
+                        <p id="nutr-clinical-summary-text" style="font-size:0.95rem; color:var(--text-primary); line-height:1.5; margin:0;"></p>
                     </div>
 
                     <!-- Notes Explanation Box -->
@@ -470,8 +511,8 @@
 
     <script src="chart-utils.js?v=1.0.3"></script>
     <script src="scanner.js?v=1.0.3"></script>
-    <script src="app.js?v=1.0.3"></script>
-    <script src="blood.js?v=1.0.3"></script>
-    <script src="nutrition.js?v=1.0.12"></script>
+    <script src="app.js?v=1.0.4"></script>
+    <script src="blood.js?v=1.0.4"></script>
+    <script src="nutrition.js?v=1.0.17"></script>
 </body>
 </html>

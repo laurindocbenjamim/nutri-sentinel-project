@@ -103,6 +103,7 @@ class DailyPlan(BaseModel):
     almoco: Meal
     lanche: Meal
     jantar: Meal
+    explanation: str = ""
 
 
 # ─── Plan Models ──────────────────────────────────────────────────────────────
@@ -117,6 +118,7 @@ class DietSummary(BaseModel):
     diet_type: str
     target_calories_kcal: int
     macro_distribution: MacroDistribution
+    clinical_summary: str = ""
     notes_explanation: str = ""
 
 

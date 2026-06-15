@@ -56,20 +56,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (btnProcess) {
         btnProcess.addEventListener("click", async () => {
-            if (!selectedFile) return;
+            if (!selectedFile) {
+                alert("Please select a file first.");
+                return;
+            }
 
             statusBox.classList.remove("hidden");
-            statusText.textContent = "Analyzing document using Clinical Multi-Agent pipeline...";
+            statusText.textContent = "Analyzing document... This may take up to a minute depending on the LLM.";
             btnProcess.disabled = true;
 
             const formData = new FormData();
             formData.append("file", selectedFile);
+            if (window.USER_UUID) {
+                formData.append("user_uuid", window.USER_UUID);
+            }
 
             try {
                 const response = await fetch("/api/blood-analysis/upload", {
                     method: "POST",
                     body: formData
                 });
+
+                if (response.status === 402 || response.status === 403) {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.detail || "Quota Exceeded. Please upgrade your plan.");
+                }
 
                 if (!response.ok) {
                     if (response.status === 401) {
@@ -84,7 +95,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 statusBox.classList.add("hidden");
             } catch (err) {
                 console.error(err);
-                statusText.textContent = `Error: ${err.message}`;
+                if (err.message.includes("413 Payload Too Large")) {
+                    statusText.textContent = "Error: The uploaded file or image is too large for the AI to process. Please try a smaller, clearer, or cropped image of the blood report.";
+                } else if (err.message.includes("Quota Exceeded") || err.message.includes("upgrade")) {
+                    statusText.innerHTML = `<span style="color:#ef4444;font-weight:bold;">${err.message}</span> <button onclick="alert('Redirecting to Stripe checkout...')" style="margin-left:10px;padding:4px 8px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;">Upgrade Plan</button>`;
+                } else {
+                    statusText.textContent = `Error: ${err.message}`;
+                }
                 btnProcess.disabled = false;
             }
         });

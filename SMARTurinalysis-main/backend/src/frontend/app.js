@@ -11,6 +11,38 @@ const PRESETS = {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
+    function getOrCreateUserUUID() {
+        let uuid = localStorage.getItem("user_uuid");
+        if (!uuid) {
+            uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+            localStorage.setItem("user_uuid", uuid);
+        }
+        return uuid;
+    }
+    window.USER_UUID = getOrCreateUserUUID();
+
+    const userSelect = document.getElementById("test-user-select");
+    if (userSelect) {
+        // Set initial value if it matches an option
+        if (["uuid-free-user", "uuid-pro-user", "uuid-enterprise-user"].includes(window.USER_UUID)) {
+            userSelect.value = window.USER_UUID;
+        }
+        
+        userSelect.addEventListener("change", (e) => {
+            if (e.target.value) {
+                window.USER_UUID = e.target.value;
+                localStorage.setItem("user_uuid", e.target.value);
+            } else {
+                localStorage.removeItem("user_uuid");
+                window.USER_UUID = getOrCreateUserUUID();
+            }
+            console.log("Active UUID set to:", window.USER_UUID);
+        });
+    }
+
     // Navigation Switching logic
     const btnNavUrinalysis = document.getElementById("btn-nav-urinalysis");
     const btnNavBlood = document.getElementById("btn-nav-blood");

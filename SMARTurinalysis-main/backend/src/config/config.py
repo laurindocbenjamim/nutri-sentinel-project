@@ -43,6 +43,9 @@ class Settings(BaseSettings):
     MONGODB_DB_NAME: str = "nutrisentinel_agent_ai"
     MONGODB_COLLECTION: str = "analysis"
 
+    # PostgreSQL Configuration
+    POSTGRES_URL: str = ""
+
     # LLM Configuration
     LLM_PROVIDER: str = "groq"
     LLM_MODEL: str = "llama-3.1-8b-instant"

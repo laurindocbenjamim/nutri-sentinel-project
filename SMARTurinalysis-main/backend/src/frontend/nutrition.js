@@ -140,8 +140,21 @@ function renderPlan(plan) {
   const weekly  = plan.weekly_plan || {};
 
   // Summary blocks
-  // Store plan object globally for CSV download
   window._currentPlan = plan;
+
+  // Render Clinical Summary
+  const clinBox = el("nutr-clinical-summary-box");
+  const clinText = el("nutr-clinical-summary-text");
+  if (clinBox && clinText) {
+    if (summary.clinical_summary && summary.clinical_summary.trim() !== "") {
+      clinText.textContent = summary.clinical_summary;
+      clinBox.classList.remove("hidden");
+      clinBox.style.display = "block";
+    } else {
+      clinBox.classList.add("hidden");
+      clinBox.style.display = "none";
+    }
+  }
 
   el("nutr-diet-type").textContent     = summary.diet_type    || "—";
   el("nutr-calories").textContent      = `${summary.target_calories_kcal || "—"} kcal`;
@@ -196,7 +209,8 @@ function renderPlan(plan) {
         </div>`;
     }).join("");
 
-    panel.innerHTML = `<div class="meals-grid">${meals}</div>`;
+    const expHtml = dayData.explanation ? `<div class="daily-explanation"><strong>💡 AI Note:</strong> ${dayData.explanation}</div>` : "";
+    panel.innerHTML = `<div class="meals-grid">${meals}</div>${expHtml}`;
     contentEl.appendChild(panel);
   });
 
@@ -231,6 +245,9 @@ function buildDownloadText(plan) {
   const weekly  = plan.weekly_plan || {};
   let txt = "NutriSentinel — Personalised Weekly Diet Plan\n";
   txt += "═".repeat(54) + "\n\n";
+  if (summary.clinical_summary) {
+    txt += `🩺 Clinical Summary\n${summary.clinical_summary}\n\n`;
+  }
   txt += `Diet Type  : ${summary.diet_type}\n`;
   txt += `Calories   : ${summary.target_calories_kcal} kcal/day\n`;
   txt += `Carbs      : ${macros.carbohydrates_g} g\n`;
@@ -244,7 +261,17 @@ function buildDownloadText(plan) {
       if (!meal) return;
       txt += `  ${lbl}\n    ${meal.description}\n    Ingredients: ${(meal.ingredients || []).join(", ")}\n\n`;
     });
+    if (data.explanation) {
+      txt += `  💡 AI Note: ${data.explanation}\n\n`;
+    }
   });
+  
+  if (summary.notes_explanation && summary.notes_explanation.trim() !== "") {
+    txt += "\n💡 AI DIETARY REASONING\n";
+    txt += "═".repeat(54) + "\n";
+    txt += summary.notes_explanation + "\n";
+  }
+  
   txt += "\n" + "═".repeat(54) + "\n";
   txt += (plan.metadata || {}).legal_disclaimer || "";
   window._planTxt = txt;
@@ -284,7 +311,7 @@ function downloadPlanCSV() {
       }
     });
   });
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement("a");
   a.href     = url;
@@ -293,9 +320,14 @@ function downloadPlanCSV() {
   URL.revokeObjectURL(url);
 }
 
+function normalizePdfText(str) {
+  if (!str) return "";
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
 function downloadPlanPDF() {
   const plan = window._currentPlan;
-  if (!plan) return window.showModernAlert("No plan generated.");
+  if (!plan) return window.showModernAlert("No plan available to download.");
   
   if (!window.jspdf || !window.jspdf.jsPDF) {
     return window.showModernAlert("PDF engine loading or failed to load. Please try again or refresh the page.");
@@ -324,28 +356,44 @@ function downloadPlanPDF() {
   doc.setTextColor(15, 23, 42); // Slate-900
   doc.text("Personalised Weekly Diet Plan", 14, 42);
   
-  // Diet Summary Box (using autoTable)
+  let finalY = 48;
+
+  // Clinical Summary Box
   const sum = plan.diet_summary || {};
   const macros = sum.macro_distribution || {};
   const fin = plan.financial_metrics || {};
+
+  if (sum.clinical_summary && sum.clinical_summary.trim() !== "") {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.setTextColor(16, 185, 129); // Green
+    doc.text("Clinical Summary", 14, finalY);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(60, 60, 60);
+    const clinText = doc.splitTextToSize(normalizePdfText(sum.clinical_summary), 180);
+    doc.text(clinText, 14, finalY + 6);
+    finalY += (clinText.length * 5) + 12;
+  }
   
   doc.autoTable({
-    startY: 48,
+    startY: finalY,
     head: [['Diet Type', 'Calories', 'Carbs', 'Protein', 'Fat', 'Weekly Cost']],
     body: [[
-      sum.diet_type || 'N/A',
+      normalizePdfText(sum.diet_type) || 'N/A',
       `${sum.target_calories_kcal || 0} kcal`,
       `${macros.carbohydrates_g || 0}g`,
       `${macros.proteins_g || 0}g`,
       `${macros.fats_g || 0}g`,
-      `€${fin.estimated_weekly_cost_eur || 0}`
+      `EUR ${fin.estimated_weekly_cost_eur || 0}`
     ]],
     theme: 'grid',
     headStyles: { fillColor: [14, 165, 233], textColor: 255, fontStyle: 'bold' },
     styles: { fontSize: 10, cellPadding: 4, halign: 'center', textColor: 40 }
   });
   
-  let finalY = doc.lastAutoTable.finalY + 12;
+  finalY = doc.lastAutoTable.finalY + 12;
   
   // Weekly Plan Iteration
   const days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
@@ -374,9 +422,9 @@ function downloadPlanPDF() {
         const meal = dPlan[m];
         mealRows.push([
           labels[m],
-          meal.description,
-          meal.ingredients.join(", "),
-          meal.glycemic_load
+          normalizePdfText(meal.description),
+          normalizePdfText(meal.ingredients.join(", ")),
+          normalizePdfText(meal.glycemic_load)
         ]);
       }
     });
@@ -397,8 +445,45 @@ function downloadPlanPDF() {
       pageBreak: 'auto'
     });
     
-    finalY = doc.lastAutoTable.finalY + 12;
+    finalY = doc.lastAutoTable.finalY + 4;
+    
+    // Day Explanation
+    if (dPlan.explanation) {
+      if (finalY > 260) {
+        doc.addPage();
+        finalY = 20;
+      }
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(9);
+      doc.setTextColor(14, 165, 233);
+      const explText = normalizePdfText(dPlan.explanation);
+      doc.text("AI Note: " + explText, 14, finalY, { maxWidth: 180, lineHeightFactor: 1.5 });
+      // Calculate approximate height of the text to advance finalY
+      const textLines = doc.splitTextToSize("AI Note: " + explText, 180);
+      finalY += (textLines.length * 4) + 6;
+    } else {
+      finalY += 8;
+    }
   });
+  
+  // AI Dietary Reasoning Box
+  if (sum.notes_explanation && sum.notes_explanation.trim() !== "") {
+    if (finalY > 240) {
+      doc.addPage();
+      finalY = 20;
+    }
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.setTextColor(14, 165, 233); // Blue
+    doc.text("AI Dietary Reasoning", 14, finalY + 4);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(60, 60, 60);
+    const reasoningText = doc.splitTextToSize(normalizePdfText(sum.notes_explanation), 180);
+    doc.text(reasoningText, 14, finalY + 10);
+    finalY += (reasoningText.length * 5) + 14;
+  }
   
   // Legal Disclaimer Box
   if (finalY > 260) {
@@ -507,27 +592,29 @@ function startNutritionPipeline(urinalysis, bloodData, userId) {
   ws.onopen = () => {
     // Send the combined source payload + notes + fasting
     const notesEl = el("nutr-input-notes");
-    const notes = notesEl ? notesEl.value.trim() : "";
+    const notesValue = notesEl ? notesEl.value.trim() : "";
     
     const fastingRadio = document.querySelector('input[name="fasting_protocol"]:checked');
-    const fastingProtocol = fastingRadio ? fastingRadio.value : "none";
+    const protocolValue = fastingRadio ? fastingRadio.value : "none";
     
     const isPregnant = el("nutr-chk-pregnant")?.checked || false;
     const hasCancer = el("nutr-chk-cancer")?.checked || false;
     const hasOtherRisk = el("nutr-chk-other-risk")?.checked || false;
     
-    ws.send(JSON.stringify({ 
-      urinalysis: urinalysis || {}, 
-      blood_data: bloodData, 
-      user_id: userId,
-      notes: notes,
-      fasting_protocol: fastingProtocol,
+    const payload = {
+      urinalysis: urinalysis || {},
+      blood_data: bloodData,
+      user_id: window.USER_UUID || "test_user_laurindo",
+      notes: notesValue,
+      fasting_protocol: protocolValue,
+      language: document.getElementById("nutr-lang-select")?.value || "English",
       clinical_overrides: {
         pregnancy: isPregnant,
         cancer: hasCancer,
         other_risk: hasOtherRisk
       }
-    }));
+    };
+    ws.send(JSON.stringify(payload));
   };
 
   ws.onmessage = ({ data }) => {
@@ -547,7 +634,11 @@ function startNutritionPipeline(urinalysis, bloodData, userId) {
         updateProgress(100, "⚠️ Emergency lock triggered.", 1);
         break;
       case "error":
-        updateProgress(100, `❌ ${msg.message}`, 6);
+        if (msg.message && (msg.message.includes("Quota Exceeded") || msg.message.includes("upgrade"))) {
+            updateProgress(100, `❌ <span style="color:#ef4444;font-weight:bold;">${msg.message}</span> <button onclick="alert('Redirecting to Stripe checkout...')" style="margin-left:10px;padding:4px 8px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;">Upgrade Plan</button>`, 6);
+        } else {
+            updateProgress(100, `❌ ${msg.message}`, 6);
+        }
         break;
       case "done":
         el("nutr-btn-generate").disabled = false;

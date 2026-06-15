@@ -152,7 +152,8 @@ class ClinicalNutritionAgent:
         loop_attempt: int = 1,
         blood_data: list[dict] | None = None,
         notes: str = "",
-        fasting_protocol: FastingProtocol = FastingProtocol.NONE
+        fasting_protocol: FastingProtocol = FastingProtocol.NONE,
+        language: str = "English"
     ) -> WeeklyPlanPayload:
         """
         Build and return the full WeeklyPlanPayload incorporating all directives.
@@ -167,14 +168,16 @@ class ClinicalNutritionAgent:
             diet_type = f"Hipercalórica / {diet_type}"
 
         system_prompt = (
-            "You are an advanced clinical nutritionist AI following international dietary guidelines (e.g., WHO). "
-            "Your task is to generate a personalized 7-day meal plan based on the user's clinical profile, "
-            "blood/urinalysis tests, pathologies, allergies, and specific preferences (notes). "
-            "You MUST return the output strictly as a JSON object following this EXACT structure for the `weekly_plan`:\n"
+            f"You are an advanced clinical nutritionist AI following international dietary guidelines (e.g., WHO). "
+            f"Your task is to generate a personalized 7-day meal plan based on the user's clinical profile, "
+            f"blood/urinalysis tests, pathologies, allergies, and specific preferences (notes). "
+            f"You MUST return the output strictly as a JSON object following this EXACT structure for the `weekly_plan`:\n"
             "{\n"
-            "  'notes_explanation': 'A clear explanation in Portuguese of why certain user notes (e.g. food requests) were included or rejected based on clinical rules/allergies.',\n"
+            "  'clinical_summary': 'A concise clinical summary (in the requested language) analyzing the patient\\'s blood and urinalysis results, highlighting any concerns before prescribing the diet.',\n"
+            "  'notes_explanation': 'A clear explanation (in the requested language) of why certain user notes (e.g. food requests) were included or rejected based on clinical rules/allergies.',\n"
             "  'weekly_plan': {\n"
             "    'monday': {\n"
+            "      'explanation': 'A detailed explanation (in the requested language) of why this specific day\\'s meals are good for the patient. Make it unique and comprehensive.',\n"
             "      'pequeno_almoco': { 'description': '...', 'ingredients': ['...'], 'allergens_checked': ['...'], 'glycemic_load': 'Baixa'|'Média'|'Alta' },\n"
             "      'almoco': { ... },\n"
             "      'lanche': { ... },\n"
@@ -190,11 +193,12 @@ class ClinicalNutritionAgent:
             "}\n"
             "CRITICAL RULES:\n"
             "1. Output ONLY valid JSON, no markdown, no explanation outside the JSON.\n"
-            "2. All keys must be exactly as shown in english (notes_explanation, weekly_plan, monday, pequeno_almoco, etc.).\n"
-            "3. The values (descriptions, ingredients, notes_explanation) MUST be in Portuguese.\n"
+            "2. All JSON keys must be exactly as shown in english (notes_explanation, weekly_plan, monday, pequeno_almoco, etc.).\n"
+            f"3. All text VALUES (descriptions, ingredients, notes_explanation, clinical_summary, explanation) MUST be in the requested language: {language}.\n"
             "4. Respect all allergies and pathologies! Ensure meals are safe and nutritionally balanced.\n"
-            "5. FASTING: If a fasting protocol is active (e.g. 16/8), adjust the meals (e.g., make 'pequeno_almoco' just 'Água, chá ou café preto sem açúcar', and distribute calories in the remaining meals).\n"
-            "6. NOTES EXPLANATION: If the user requests foods like 'peas' or 'bread' in their notes, and you choose to omit them due to allergies or diet constraints, you MUST explain why in the `notes_explanation` field."
+            "5. FASTING: If a fasting protocol is active (e.g. 16/8), adjust the meals (e.g., make 'pequeno_almoco' just 'Water, black coffee/tea', and distribute calories in the remaining meals).\n"
+            "6. NOTES EXPLANATION: If the user requests foods like 'peas' or 'bread' in their notes, and you choose to omit them due to allergies or diet constraints, you MUST explain why in the `notes_explanation` field.\n"
+            "7. COMPLETENESS: You MUST generate all 7 days of the week completely. DO NOT skip Saturday or Sunday. Ensure breakfasts and meals are highly varied across the week."
         )
 
         user_prompt = (
@@ -216,10 +220,11 @@ class ClinicalNutritionAgent:
 
         try:
             # For JSON mode we must use a compatible model. llama-3.1-8b-instant supports it well in Groq.
-            res = call_groq(user_prompt, system_prompt, json_mode=True, model="llama-3.1-8b-instant")
+            res = call_groq(user_prompt, system_prompt, json_mode=True, model="llama-3.1-8b-instant", max_tokens=6000)
             res_dict = json.loads(res)
             weekly_plan_dict = res_dict.get("weekly_plan", res_dict) # Fallback if LLM forgets wrapper
             notes_explanation = res_dict.get("notes_explanation", "")
+            clinical_summary = res_dict.get("clinical_summary", "")
             
             weekly = {}
             for day in DAYS:
@@ -228,12 +233,14 @@ class ClinicalNutritionAgent:
                     pequeno_almoco=Meal(**day_data.get("pequeno_almoco", {"description": "Refeição não gerada", "ingredients": [], "allergens_checked": [], "glycemic_load": GlycemicLoad.MEDIUM})),
                     almoco=Meal(**day_data.get("almoco", {"description": "Refeição não gerada", "ingredients": [], "allergens_checked": [], "glycemic_load": GlycemicLoad.MEDIUM})),
                     lanche=Meal(**day_data.get("lanche", {"description": "Refeição não gerada", "ingredients": [], "allergens_checked": [], "glycemic_load": GlycemicLoad.MEDIUM})),
-                    jantar=Meal(**day_data.get("jantar", {"description": "Refeição não gerada", "ingredients": [], "allergens_checked": [], "glycemic_load": GlycemicLoad.MEDIUM}))
+                    jantar=Meal(**day_data.get("jantar", {"description": "Refeição não gerada", "ingredients": [], "allergens_checked": [], "glycemic_load": GlycemicLoad.MEDIUM})),
+                    explanation=day_data.get("explanation", "")
                 )
         except Exception as e:
             logger.error(f"LLM Diet Generation failed: {e}. Falling back to default templates.")
             weekly = _build_base_menu(directives, profile)
             notes_explanation = "Erro ao gerar explicação personalizada (Fallback ativado)."
+            clinical_summary = ""
 
         estimated_cost = _WEEKLY_COST_ESTIMATES.get(profile.budget_tier, Decimal("70.00"))
 
@@ -246,6 +253,7 @@ class ClinicalNutritionAgent:
             diet_summary=DietSummary(
                 diet_type=diet_type,
                 target_calories_kcal=adjusted["target_calories_kcal"],
+                clinical_summary=clinical_summary,
                 macro_distribution=MacroDistribution(
                     carbohydrates_g=adjusted["carbohydrates_g"],
                     proteins_g=adjusted["proteins_g"],

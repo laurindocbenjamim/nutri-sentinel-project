@@ -682,3 +682,14 @@ select {
 .status-badge.high    { background: rgba(239,68,68,0.15); color: #f87171; }
 .status-badge.low     { background: rgba(234,179,8,0.15); color: #fbbf24; }
 
+/* Daily Explanation */
+.daily-explanation {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: rgba(14, 165, 233, 0.08);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
