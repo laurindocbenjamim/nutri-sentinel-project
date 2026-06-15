@@ -14,6 +14,11 @@ from src.domains.nutritional_agents.models import (
     WeeklyPlanPayload, DietSummary, MacroDistribution,
     FinancialMetrics, AuditorEvaluation, BudgetTier, BudgetStatus, GlycemicLoad,
 )
+from src.domains.blood_analysis.agents import call_groq
+import json
+import logging
+
+logger = logging.getLogger("nutri-sentinel")
 
 # Cost weight table for budget gate (used by calculate_recipe_budget)
 _PRICE_WEIGHTS: dict[str, int] = {
@@ -145,6 +150,8 @@ class ClinicalNutritionAgent:
         profile: UserProfile,
         directives: dict,
         loop_attempt: int = 1,
+        blood_data: list[dict] | None = None,
+        notes: str = ""
     ) -> WeeklyPlanPayload:
         """
         Build and return the full WeeklyPlanPayload incorporating all directives.
@@ -158,7 +165,65 @@ class ClinicalNutritionAgent:
         if profile.goal == "ganhar_peso":
             diet_type = f"Hipercalórica / {diet_type}"
 
-        weekly = _build_base_menu(directives, profile)
+        system_prompt = (
+            "You are an advanced clinical nutritionist AI following international dietary guidelines (e.g., WHO). "
+            "Your task is to generate a personalized 7-day meal plan based on the user's clinical profile, "
+            "blood/urinalysis tests, pathologies, allergies, and specific preferences (notes). "
+            "You MUST return the output strictly as a JSON object following this EXACT structure for the `weekly_plan`:\n"
+            "{\n"
+            "  'monday': {\n"
+            "    'pequeno_almoco': { 'description': '...', 'ingredients': ['...'], 'allergens_checked': ['...'], 'glycemic_load': 'Baixa'|'Média'|'Alta' },\n"
+            "    'almoco': { ... },\n"
+            "    'lanche': { ... },\n"
+            "    'jantar': { ... }\n"
+            "  },\n"
+            "  'tuesday': { ... },\n"
+            "  'wednesday': { ... },\n"
+            "  'thursday': { ... },\n"
+            "  'friday': { ... },\n"
+            "  'saturday': { ... },\n"
+            "  'sunday': { ... }\n"
+            "}\n"
+            "CRITICAL:\n"
+            "1. Output ONLY valid JSON, no markdown, no explanation.\n"
+            "2. All keys must be exactly as shown in english (monday, pequeno_almoco, etc.).\n"
+            "3. The values (descriptions and ingredients) MUST be in Portuguese.\n"
+            "4. Respect all allergies and pathologies! Ensure meals are safe and nutritionally balanced."
+        )
+
+        user_prompt = (
+            "Generate a 7-day meal plan for the following user:\n\n"
+            f"- Age: {profile.age}\n"
+            f"- Sex: {profile.sex}\n"
+            f"- Goal: {profile.goal}\n"
+            f"- Budget Tier: {profile.budget_tier.value}\n"
+            f"- Pathologies: {', '.join(profile.pathologies) if profile.pathologies else 'None'}\n"
+            f"- Allergies: {', '.join(profile.allergies) if profile.allergies else 'None'}\n"
+            f"- Medications: {', '.join(profile.medications) if profile.medications else 'None'}\n"
+            f"- Target Calories: {adjusted['target_calories_kcal']} kcal/day\n"
+            f"\nSpecialist Directives: {json.dumps(directives)}\n"
+            f"Urinalysis Data: {urinalysis_data.model_dump_json()}\n"
+            f"Blood Data: {json.dumps(blood_data) if blood_data else 'None'}\n"
+            f"\nUser Dietary Notes / Preferences: {notes if notes else 'None'}\n"
+        )
+
+        try:
+            # For JSON mode we must use a compatible model. llama-3.1-8b-instant supports it well in Groq.
+            res = call_groq(user_prompt, system_prompt, json_mode=True, model="llama-3.1-8b-instant")
+            weekly_plan_dict = json.loads(res)
+            
+            weekly = {}
+            for day in DAYS:
+                day_data = weekly_plan_dict.get(day, {})
+                weekly[day] = DailyPlan(
+                    pequeno_almoco=Meal(**day_data.get("pequeno_almoco", {"description": "Refeição não gerada", "ingredients": [], "allergens_checked": [], "glycemic_load": GlycemicLoad.MEDIUM})),
+                    almoco=Meal(**day_data.get("almoco", {"description": "Refeição não gerada", "ingredients": [], "allergens_checked": [], "glycemic_load": GlycemicLoad.MEDIUM})),
+                    lanche=Meal(**day_data.get("lanche", {"description": "Refeição não gerada", "ingredients": [], "allergens_checked": [], "glycemic_load": GlycemicLoad.MEDIUM})),
+                    jantar=Meal(**day_data.get("jantar", {"description": "Refeição não gerada", "ingredients": [], "allergens_checked": [], "glycemic_load": GlycemicLoad.MEDIUM}))
+                )
+        except Exception as e:
+            logger.error(f"LLM Diet Generation failed: {e}. Falling back to default templates.")
+            weekly = _build_base_menu(directives, profile)
 
         estimated_cost = _WEEKLY_COST_ESTIMATES.get(profile.budget_tier, Decimal("70.00"))
 

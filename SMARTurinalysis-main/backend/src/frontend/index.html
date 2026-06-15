@@ -225,9 +225,10 @@
 
     <!-- Nutritional Agents View -->
     <div id="view-nutrition" class="dashboard-view hidden">
-        <main class="grid" style="grid-template-columns:1fr;max-width:1100px;margin:0 auto;">
-            <section class="card" style="padding:2rem;">
-
+        <main id="nutr-main-grid" style="display:grid;grid-template-columns:1fr;gap:1.5rem;max-width:1400px;margin:0 auto;transition:grid-template-columns 0.6s cubic-bezier(0.16, 1, 0.3, 1);align-items:start;">
+            
+            <!-- LEFT PANEL: Input Data -->
+            <section class="card" id="nutr-left-panel" style="padding:2rem;">
                 <!-- Header -->
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
                     <div>
@@ -235,8 +236,8 @@
                         <p class="description" style="margin:0.25rem 0 0;">AI-powered 7-day personalised diet, generated from your clinical data.</p>
                     </div>
                     <div style="display:flex;gap:0.75rem;">
+                        <button id="nutr-btn-profile" class="btn btn-secondary" style="background:rgba(255,255,255,0.05);">👤 View Profile</button>
                         <button id="nutr-btn-generate" class="btn btn-primary" style="background:linear-gradient(135deg,#16a34a,#0ea5e9);">⚡ Generate Diet</button>
-                        <button id="nutr-btn-download" class="btn btn-secondary" disabled>📥 Download .txt</button>
                     </div>
                 </div>
 
@@ -256,6 +257,16 @@
                         <div class="nutr-input-box"><div class="nutr-box-label">Specific Gravity</div><div class="nutr-box-val" id="nutr-in-density">—</div></div>
                     </div>
                 </div>
+
+                <!-- Notes Textarea -->
+                <div style="margin-bottom:1.5rem;">
+                    <h3 style="font-size:0.9rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Dietary Notes / Preferences (Optional)</h3>
+                    <textarea id="nutr-input-notes" rows="4" placeholder="Add any specific requests, e.g. 'I want more fish' or 'Prefer light dinners'..." style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:0.75rem;color:var(--text-primary);font-family:inherit;font-size:0.9rem;resize:vertical;outline:none;transition:border-color 0.2s;"></textarea>
+                </div>
+            </section>
+
+            <!-- RIGHT PANEL: Progress & Results -->
+            <section class="card" id="nutr-right-panel" style="padding:2rem;opacity:0;transform:translateX(40px);transition:all 0.6s cubic-bezier(0.16, 1, 0.3, 1);display:none;">
 
                 <!-- Progress Section -->
                 <div id="nutr-progress-section" class="hidden" style="margin-bottom:2rem;">
@@ -285,7 +296,14 @@
                 <div id="nutr-results-section" class="hidden">
 
                     <!-- Summary Metric Boxes -->
-                    <h3 style="font-size:0.9rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Diet Summary</h3>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;flex-wrap:wrap;gap:1rem;">
+                        <h3 style="margin:0;font-size:0.9rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.08em;">Diet Summary</h3>
+                        <div style="display:flex;gap:0.5rem;" id="nutr-download-group">
+                            <button id="nutr-btn-dl-pdf" class="btn btn-secondary" style="padding:0.4rem 0.8rem;font-size:0.8rem;">📥 PDF</button>
+                            <button id="nutr-btn-dl-csv" class="btn btn-secondary" style="padding:0.4rem 0.8rem;font-size:0.8rem;">📥 CSV</button>
+                            <button id="nutr-btn-dl-txt" class="btn btn-secondary" style="padding:0.4rem 0.8rem;font-size:0.8rem;">📥 TXT</button>
+                        </div>
+                    </div>
                     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:0.75rem;margin-bottom:2rem;">
                         <div class="nutr-result-box"><div class="nutr-box-label">Diet Type</div><div class="nutr-box-val nutr-highlight" id="nutr-diet-type">—</div></div>
                         <div class="nutr-result-box"><div class="nutr-box-label">Daily Calories</div><div class="nutr-box-val nutr-highlight" id="nutr-calories">—</div></div>
@@ -341,6 +359,18 @@
         </div>
     </div>
 
+    <!-- Profile Modal -->
+    <div id="profile-modal" class="modal-overlay hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15,23,42,0.9); display: flex; justify-content: center; align-items: center; z-index: 2000; backdrop-filter: blur(10px);">
+        <div class="modal-card" style="width: 90%; max-width: 600px; background: rgba(30, 41, 59, 0.95); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 2.5rem; position: relative;">
+            <button id="btn-close-profile" style="position: absolute; top: 1.5rem; right: 1.5rem; background: transparent; border: none; color: var(--text-secondary); font-size: 1.75rem; cursor: pointer; transition: color 0.2s; line-height: 1;">&times;</button>
+            <h3 style="margin-top: 0; margin-bottom: 1.5rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem; font-size: 1.3rem;">👤 User Clinical Profile</h3>
+            
+            <div id="profile-content" style="display:grid;gap:1.25rem;">
+                <!-- Loaded dynamically via JS -->
+            </div>
+        </div>
+    </div>
+
     <!-- Chart Zoom Modal -->
     <div id="chart-zoom-modal" class="modal-overlay hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15,23,42,0.9); display: flex; justify-content: center; align-items: center; z-index: 2000; backdrop-filter: blur(10px);">
         <div class="modal-card" style="width: 90%; max-width: 800px; background: rgba(30, 41, 59, 0.75); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 2rem; position: relative;">
@@ -352,10 +382,14 @@
         </div>
     </div>
 
+    <!-- External Libs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
     <script src="chart-utils.js?v=1.0.3"></script>
     <script src="scanner.js?v=1.0.3"></script>
     <script src="app.js?v=1.0.3"></script>
     <script src="blood.js?v=1.0.3"></script>
-    <script src="nutrition.js?v=1.0.0"></script>
+    <script src="nutrition.js?v=1.0.8"></script>
 </body>
 </html>

@@ -8,6 +8,8 @@ from src.domains.nutritional_agents.models import (
     NutritionPlanRequest, NutritionPlanResponse,
 )
 from src.domains.nutritional_agents.orchestrator import NutritionalOrchestrator
+from src.domains.nutritional_agents.router_agent import RouterAgent
+from src.domains.nutritional_agents.models import UserProfile
 
 router = APIRouter(prefix="/api/nutrition", tags=["Nutritional Agents"])
 
@@ -61,3 +63,16 @@ async def nutrition_status() -> dict:
         "status": "operational",
         "agents": ["gatekeeper", "router", "oncology", "pregnancy", "autoimmune", "clinical", "auditor"],
     }
+
+
+@router.get(
+    "/profile/{user_id}",
+    response_model=UserProfile,
+    summary="Get User Clinical Profile",
+)
+async def get_user_profile(user_id: str) -> UserProfile:
+    """Fetch the user's clinical profile from the database."""
+    router_agent = RouterAgent()
+    profile = await router_agent.fetch_clinical_profile(user_id)
+    return profile
+

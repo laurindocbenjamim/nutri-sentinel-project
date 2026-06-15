@@ -49,7 +49,9 @@ async def nutrition_ws(ws: WebSocket):
         payload = json.loads(raw)
 
         urinalysis_dict = payload.get("urinalysis", {})
+        blood_data = payload.get("blood_data")
         user_id = payload.get("user_id", "anonymous")
+        notes = payload.get("notes", "")
 
         # Build UrinalysisData from the incoming dict
         urinalysis_data = UrinalysisData(**urinalysis_dict)
@@ -111,7 +113,7 @@ async def nutrition_ws(ws: WebSocket):
                 "label": f"🍽️ Clinical Agent: Generating 7-day meal plan (attempt {attempt}/{_MAX_LOOPS})...",
                 "percent": 65 + (attempt - 1) * 8
             })
-            plan = clinical.structure_weekly_menu(urinalysis_data, profile, directives, attempt)
+            plan = clinical.structure_weekly_menu(urinalysis_data, profile, directives, attempt, blood_data, notes)
 
             await _send(ws, "progress", {
                 "step": 5,
