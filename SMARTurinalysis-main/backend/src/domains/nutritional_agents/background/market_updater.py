@@ -6,7 +6,8 @@ database updated with real-world prices from Portuguese supermarkets and checks
 for new APC (Associação Portuguesa de Celíacos) gluten-free certifications.
 
 This guarantees the core Diet Builder can run locally in milliseconds, while
-this agent handles the slow web scraping process independently.
+this agent handles the slow web scraping process independently. It processes
+ingredients in small batches, prioritizing the oldest updated items.
 """
 
 import asyncio
@@ -29,7 +30,9 @@ logger = logging.getLogger("market_updater")
 
 AGENT_STATUS = {
     "action": "Idle",
-    "target": None
+    "target": None,
+    "old_price": None,
+    "new_price": None
 }
 
 async def update_prices():
@@ -37,7 +40,9 @@ async def update_prices():
     Search the web for current prices and update the MongoDB ingredients.
     """
     col = get_collection("ingredients")
-    ingredients = await col.find({}).to_list(length=100)
+    # Fetch 10 items, sorting by last_updated (ascending) so we always update the oldest ones first.
+    # Items without last_updated will naturally sort first.
+    ingredients = await col.find({}).sort("last_updated", 1).limit(10).to_list(length=10)
     ddgs = DDGS()
 
     for item in ingredients:
@@ -45,8 +50,11 @@ async def update_prices():
         query = f"preço {item['Nome']} portugal supermercado {markets}"
         logger.info(f"Searching web for: {query}")
         
+        old_price_val = item.get("Preco_Medio", "N/A")
         AGENT_STATUS["action"] = "Scraping market prices"
         AGENT_STATUS["target"] = item['Nome']
+        AGENT_STATUS["old_price"] = old_price_val
+        AGENT_STATUS["new_price"] = "Searching..."
         
         try:
             # Get top 3 search results
@@ -75,18 +83,25 @@ async def update_prices():
             json_str = match.group(0) if match else llm_res
             data = json.loads(json_str)
 
-            novo_preco = data.get("Preco_Medio", item.get("Preco_Medio"))
+            novo_preco = data.get("Preco_Medio", old_price_val)
             nova_categoria = data.get("Categoria_Custo", item.get("Categoria_Custo"))
 
+            from datetime import datetime
             # Update DB
             await col.update_one(
                 {"_id": item["_id"]},
-                {"$set": {"Preco_Medio": novo_preco, "Categoria_Custo": nova_categoria}}
+                {"$set": {
+                    "Preco_Medio": novo_preco, 
+                    "Categoria_Custo": nova_categoria,
+                    "last_updated": datetime.utcnow()
+                }}
             )
             logger.info(f"✅ Updated {item['Nome']}: {novo_preco} ({nova_categoria})")
+            AGENT_STATUS["new_price"] = novo_preco
 
         except Exception as e:
             logger.error(f"❌ Failed to update {item['Nome']}: {e}")
+            AGENT_STATUS["new_price"] = "Failed"
             
         # Add a sleep time after each search to prevent API rate limits
         await asyncio.sleep(settings.MARKET_UPDATER_SLEEP_SECONDS)
@@ -143,14 +158,20 @@ async def run_market_updater():
     logger.info("Starting Market Updater Agent (Background Service)...")
     AGENT_STATUS["action"] = "Initializing Database"
     AGENT_STATUS["target"] = None
+    AGENT_STATUS["old_price"] = None
+    AGENT_STATUS["new_price"] = None
     await update_prices()
     
     AGENT_STATUS["action"] = "Searching new certifications"
     AGENT_STATUS["target"] = "APC Gluten-Free Products"
+    AGENT_STATUS["old_price"] = None
+    AGENT_STATUS["new_price"] = None
     await search_new_certifications()
     
     AGENT_STATUS["action"] = "Idle"
     AGENT_STATUS["target"] = None
+    AGENT_STATUS["old_price"] = None
+    AGENT_STATUS["new_price"] = None
     await close_client()
     logger.info("Market Updater Finished.")
 

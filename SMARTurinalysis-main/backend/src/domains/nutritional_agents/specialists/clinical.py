@@ -244,8 +244,8 @@ class ClinicalNutritionAgent:
         )
 
         try:
-            # For JSON mode we must use a compatible model. llama-3.1-8b-instant supports it well in Groq.
-            res = call_groq(user_prompt, system_prompt, json_mode=True, model="llama-3.1-8b-instant", max_tokens=6000)
+            # Use the configured LLM_MODEL instead of hardcoding, as more powerful models handle massive JSON schemas better.
+            res = call_groq(user_prompt, system_prompt, json_mode=True, model=settings.LLM_MODEL, max_tokens=6000)
             
             # Safely extract JSON using regex to handle potential markdown wrappers like ```json ... ```
             match = re.search(r"\{.*\}", res, re.DOTALL)
@@ -419,8 +419,16 @@ class ClinicalNutritionAgent:
 
                 sl.append(ShoppingListItem(item_name=ing, quantity=str(count), category=cat))
                 
-                # Get price from local DB or default
-                preco_db = local_prices.get(ing.lower(), "3.00€")
+                # Get price from local DB or default with fuzzy matching
+                preco_db = local_prices.get(ing.lower())
+                if not preco_db:
+                    for db_name, price in local_prices.items():
+                        if db_name in ing.lower() or ing.lower() in db_name:
+                            preco_db = price
+                            break
+                if not preco_db:
+                    preco_db = "3.00€"
+                    
                 pc_items.append(PriceComparisonItem(
                     ingredient=ing,
                     continente_price=preco_db,

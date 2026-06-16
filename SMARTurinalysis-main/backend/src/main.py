@@ -104,6 +104,8 @@ async def get_background_agents():
         # Pull live status if it's the market updater
         action = AGENT_STATUS.get("action", "Idle") if job.id == "market_updater_job" else "Idle"
         target = AGENT_STATUS.get("target") if job.id == "market_updater_job" else None
+        old_price = AGENT_STATUS.get("old_price") if job.id == "market_updater_job" else None
+        new_price = AGENT_STATUS.get("new_price") if job.id == "market_updater_job" else None
         
         agents.append({
             "id": job.id,
@@ -111,7 +113,9 @@ async def get_background_agents():
             "status": "Running" if action != "Idle" else "Idle",
             "next_run": next_run,
             "action": action,
-            "target": target
+            "target": target,
+            "old_price": old_price,
+            "new_price": new_price
         })
         
     return {"agents": agents}

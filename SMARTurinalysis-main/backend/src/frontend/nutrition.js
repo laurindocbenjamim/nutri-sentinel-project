@@ -1102,6 +1102,12 @@ window.sendBloodToNutrition = function (bloodData) {
                 <div style="color: var(--text-secondary); margin-bottom: 0.2rem;">Currently executing:</div>
                 <div style="color: var(--text-primary); font-weight: 600;">${agent.action}</div>
                 ${agent.target ? `<div style="color: #38bdf8; margin-top: 0.2rem; display: flex; align-items: center; gap: 0.3rem;">🎯 ${agent.target}</div>` : ''}
+                ${(agent.old_price || agent.new_price) ? `
+                  <div style="margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px dashed rgba(255,255,255,0.1); display: flex; justify-content: space-between; font-family: monospace;">
+                    <span style="color: #94a3b8;">Old: ${agent.old_price || 'N/A'}</span>
+                    <span style="color: #4ade80;">New: ${agent.new_price || '...'}</span>
+                  </div>
+                ` : ''}
               </div>
             ` : ''}
           </div>
