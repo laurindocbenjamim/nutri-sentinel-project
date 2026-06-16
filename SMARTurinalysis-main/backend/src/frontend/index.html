@@ -430,6 +430,21 @@
         </div>
     </div>
 
+    <!-- Background Agents Tracking Panel -->
+    <div id="agent-tracker-panel" style="position: fixed; bottom: 20px; right: 20px; width: 320px; background: rgba(30, 41, 59, 0.95); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.25rem; z-index: 1000; backdrop-filter: blur(8px); box-shadow: 0 10px 25px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 0.75rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
+            <h4 style="margin: 0; color: var(--text-primary); font-size: 0.95rem; display: flex; align-items: center; gap: 0.5rem;">
+                <span class="pulse-indicator" id="agent-pulse" style="display: inline-block; width: 8px; height: 8px; background-color: #10b981; border-radius: 50%; box-shadow: 0 0 8px #10b981;"></span>
+                Background Agents
+            </h4>
+            <button id="btn-toggle-agent-tracker" style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1rem;">_</button>
+        </div>
+        <div id="agent-list" style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 200px; overflow-y: auto;">
+            <div style="color: var(--text-secondary); font-size: 0.8rem; text-align: center; padding: 0.5rem 0;">Polling agents...</div>
+        </div>
+    </div>
+
+
     <!-- Real-time Scanner Modal -->
     <div id="scanner-modal" class="scanner-modal hidden">
         <div class="scanner-content">

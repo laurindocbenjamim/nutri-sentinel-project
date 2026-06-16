@@ -28,6 +28,7 @@ async def lifespan(app: FastAPI):
     """Manage application startup and shutdown lifecycle."""
     
     # Initialize and start background scheduler
+    global scheduler
     scheduler = AsyncIOScheduler()
     interval_minutes = settings.MARKET_UPDATER_INTERVAL_MINUTES
     scheduler.add_job(run_market_updater, "interval", minutes=interval_minutes, id="market_updater_job")
@@ -84,6 +85,29 @@ async def init_session():
         path="/"
     )
     return response
+
+from datetime import datetime
+
+@app.get("/api/system/background-agents")
+async def get_background_agents():
+    """Returns the status of real-time background agents running in APScheduler."""
+    if 'scheduler' not in globals() or not scheduler.running:
+        return {"agents": []}
+        
+    agents = []
+    for job in scheduler.get_jobs():
+        next_run = job.next_run_time.isoformat() if job.next_run_time else None
+        # Provide a human-readable name based on job.id
+        name = job.id.replace("_", " ").title()
+        
+        agents.append({
+            "id": job.id,
+            "name": name,
+            "status": "Running" if job.next_run_time else "Idle",
+            "next_run": next_run
+        })
+        
+    return {"agents": agents}
 
 # Include Bounded Context Domain routers
 app.include_router(synthetic_router)

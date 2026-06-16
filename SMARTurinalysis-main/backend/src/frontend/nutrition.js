@@ -1016,3 +1016,102 @@ window.sendBloodToNutrition = function (bloodData) {
   setNutriData("blood", `Blood Analysis — ${bloodData.patient_name || "Patient"}`, bloodData, urinalysis);
   document.getElementById("btn-nav-nutrition")?.click();
 };
+
+// ── Background Agents Tracker ────────────────────────────────────────────────
+(function initAgentTracker() {
+  const trackerPanel = el("agent-tracker-panel");
+  const btnToggle = el("btn-toggle-agent-tracker");
+  const agentList = el("agent-list");
+  const pulse = el("agent-pulse");
+  
+  if (!trackerPanel || !agentList) return;
+
+  let isMinimized = false;
+
+  btnToggle.addEventListener("click", () => {
+    isMinimized = !isMinimized;
+    if (isMinimized) {
+      agentList.style.display = "none";
+      btnToggle.textContent = "+";
+      trackerPanel.style.paddingBottom = "0.5rem";
+    } else {
+      agentList.style.display = "flex";
+      btnToggle.textContent = "_";
+      trackerPanel.style.paddingBottom = "1.25rem";
+    }
+  });
+
+  async function pollAgents() {
+    try {
+      const res = await fetch("/api/system/background-agents");
+      if (!res.ok) throw new Error("Failed to fetch");
+      const data = await res.json();
+      
+      const agents = data.agents || [];
+      if (agents.length === 0) {
+        agentList.innerHTML = `<div style="color: var(--text-secondary); font-size: 0.8rem; text-align: center; padding: 0.5rem 0;">No background agents running.</div>`;
+        if (pulse) pulse.style.backgroundColor = "#64748b"; // Slate
+        if (pulse) pulse.style.boxShadow = "none";
+        return;
+      }
+
+      let html = "";
+      let anyRunning = false;
+      
+      agents.forEach(agent => {
+        const isRunning = agent.status === "Running";
+        if (isRunning) anyRunning = true;
+        
+        const statusColor = isRunning ? "#10b981" : "#f59e0b"; // Green or Amber
+        let nextRunText = "Idle";
+        if (agent.next_run) {
+          const nextDate = new Date(agent.next_run);
+          const now = new Date();
+          const diffMs = nextDate - now;
+          if (diffMs > 0) {
+            const diffMins = Math.ceil(diffMs / 60000);
+            if (diffMins < 60) {
+              nextRunText = `Next in ${diffMins} min`;
+            } else if (diffMins < 1440) {
+              const hrs = Math.floor(diffMins / 60);
+              const mins = diffMins % 60;
+              nextRunText = `Next in ${hrs}h ${mins}m`;
+            } else {
+              const days = Math.floor(diffMins / 1440);
+              const hrs = Math.floor((diffMins % 1440) / 60);
+              nextRunText = `Next in ${days}d ${hrs}h`;
+            }
+          } else {
+            nextRunText = "Running now";
+          }
+        }
+        
+        html += `
+          <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="color: var(--text-primary); font-size: 0.85rem; font-weight: 600;">${agent.name}</div>
+              <div style="color: var(--text-secondary); font-size: 0.75rem; margin-top: 0.2rem;">${nextRunText}</div>
+            </div>
+            <div style="color: ${statusColor}; font-size: 0.75rem; font-weight: 600; padding: 0.2rem 0.5rem; background: ${statusColor}20; border-radius: 4px;">
+              ${agent.status}
+            </div>
+          </div>
+        `;
+      });
+
+      agentList.innerHTML = html;
+      
+      if (pulse) {
+        pulse.style.backgroundColor = anyRunning ? "#10b981" : "#f59e0b";
+        pulse.style.boxShadow = anyRunning ? "0 0 8px #10b981" : "none";
+      }
+    } catch (e) {
+      console.error("Agent polling failed:", e);
+    }
+  }
+
+  // Initial poll and set interval (10 seconds)
+  pollAgents();
+  setInterval(pollAgents, 10000);
+})();
+
