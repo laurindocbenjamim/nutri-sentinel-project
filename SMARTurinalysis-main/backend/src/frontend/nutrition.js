@@ -1087,14 +1087,23 @@ window.sendBloodToNutrition = function (bloodData) {
         }
         
         html += `
-          <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <div style="color: var(--text-primary); font-size: 0.85rem; font-weight: 600;">${agent.name}</div>
-              <div style="color: var(--text-secondary); font-size: 0.75rem; margin-top: 0.2rem;">${nextRunText}</div>
+          <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="color: var(--text-primary); font-size: 0.85rem; font-weight: 600;">${agent.name}</div>
+                <div style="color: var(--text-secondary); font-size: 0.75rem; margin-top: 0.2rem;">${nextRunText}</div>
+              </div>
+              <div style="color: ${statusColor}; font-size: 0.75rem; font-weight: 600; padding: 0.2rem 0.5rem; background: ${statusColor}20; border-radius: 4px;">
+                ${agent.status}
+              </div>
             </div>
-            <div style="color: ${statusColor}; font-size: 0.75rem; font-weight: 600; padding: 0.2rem 0.5rem; background: ${statusColor}20; border-radius: 4px;">
-              ${agent.status}
-            </div>
+            ${agent.action && agent.action !== "Idle" ? `
+              <div style="background: rgba(0,0,0,0.2); border-radius: 6px; padding: 0.5rem; font-size: 0.75rem; border-left: 2px solid ${statusColor};">
+                <div style="color: var(--text-secondary); margin-bottom: 0.2rem;">Currently executing:</div>
+                <div style="color: var(--text-primary); font-weight: 600;">${agent.action}</div>
+                ${agent.target ? `<div style="color: #38bdf8; margin-top: 0.2rem; display: flex; align-items: center; gap: 0.3rem;">🎯 ${agent.target}</div>` : ''}
+              </div>
+            ` : ''}
           </div>
         `;
       });

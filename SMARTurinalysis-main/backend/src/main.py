@@ -87,6 +87,7 @@ async def init_session():
     return response
 
 from datetime import datetime
+from src.domains.nutritional_agents.background.market_updater import AGENT_STATUS
 
 @app.get("/api/system/background-agents")
 async def get_background_agents():
@@ -100,11 +101,17 @@ async def get_background_agents():
         # Provide a human-readable name based on job.id
         name = job.id.replace("_", " ").title()
         
+        # Pull live status if it's the market updater
+        action = AGENT_STATUS.get("action", "Idle") if job.id == "market_updater_job" else "Idle"
+        target = AGENT_STATUS.get("target") if job.id == "market_updater_job" else None
+        
         agents.append({
             "id": job.id,
             "name": name,
-            "status": "Running" if job.next_run_time else "Idle",
-            "next_run": next_run
+            "status": "Running" if action != "Idle" else "Idle",
+            "next_run": next_run,
+            "action": action,
+            "target": target
         })
         
     return {"agents": agents}

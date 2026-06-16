@@ -21,10 +21,16 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 
 from src.shared.database import get_collection, close_client
 from src.domains.blood_analysis.agents import call_groq
+from src.config.config import settings
 from duckduckgo_search import DDGS
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("market_updater")
+
+AGENT_STATUS = {
+    "action": "Idle",
+    "target": None
+}
 
 async def update_prices():
     """
@@ -35,8 +41,12 @@ async def update_prices():
     ddgs = DDGS()
 
     for item in ingredients:
-        query = f"preço {item['Nome']} portugal supermercado continente pingo doce auchan"
+        markets = settings.MARKETS_TO_SEARCH
+        query = f"preço {item['Nome']} portugal supermercado {markets}"
         logger.info(f"Searching web for: {query}")
+        
+        AGENT_STATUS["action"] = "Scraping market prices"
+        AGENT_STATUS["target"] = item['Nome']
         
         try:
             # Get top 3 search results
@@ -77,6 +87,9 @@ async def update_prices():
 
         except Exception as e:
             logger.error(f"❌ Failed to update {item['Nome']}: {e}")
+            
+        # Add a sleep time after each search to prevent API rate limits
+        await asyncio.sleep(settings.MARKET_UPDATER_SLEEP_SECONDS)
 
 async def search_new_certifications():
     """
@@ -128,8 +141,16 @@ async def search_new_certifications():
 
 async def run_market_updater():
     logger.info("Starting Market Updater Agent (Background Service)...")
+    AGENT_STATUS["action"] = "Initializing Database"
+    AGENT_STATUS["target"] = None
     await update_prices()
+    
+    AGENT_STATUS["action"] = "Searching new certifications"
+    AGENT_STATUS["target"] = "APC Gluten-Free Products"
     await search_new_certifications()
+    
+    AGENT_STATUS["action"] = "Idle"
+    AGENT_STATUS["target"] = None
     await close_client()
     logger.info("Market Updater Finished.")
 
