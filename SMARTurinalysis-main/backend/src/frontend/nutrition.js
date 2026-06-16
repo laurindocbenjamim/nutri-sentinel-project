@@ -167,52 +167,117 @@ function renderPlan(plan) {
   // Weekly plan tabs
   const tabsEl   = el("nutr-day-tabs");
   const contentEl = el("nutr-day-content");
-  tabsEl.innerHTML = "";
-  contentEl.innerHTML = "";
+  if (tabsEl && contentEl) {
+    tabsEl.innerHTML = "";
+    contentEl.innerHTML = "";
 
-  const days = Object.keys(weekly);
-  days.forEach((day, idx) => {
-    // Tab button
-    const btn = document.createElement("button");
-    btn.className = "nutr-day-tab" + (idx === 0 ? " active" : "");
-    btn.textContent = DAY_LABELS[day] || day;
-    btn.dataset.day = day;
-    btn.addEventListener("click", () => {
-      document.querySelectorAll(".nutr-day-tab").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      document.querySelectorAll(".nutr-day-panel").forEach(p => p.classList.add("hidden"));
-      el(`nutr-day-${day}`)?.classList.remove("hidden");
+    const days = Object.keys(weekly);
+    days.forEach((day, idx) => {
+      // Tab button
+      const btn = document.createElement("button");
+      btn.className = "nutr-day-tab" + (idx === 0 ? " active" : "");
+      btn.textContent = DAY_LABELS[day] || day;
+      btn.dataset.day = day;
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".nutr-day-tab").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        document.querySelectorAll(".nutr-day-panel").forEach(p => p.classList.add("hidden"));
+        el(`nutr-day-${day}`)?.classList.remove("hidden");
+      });
+      tabsEl.appendChild(btn);
+
+      // Day panel
+      const panel = document.createElement("div");
+      panel.id = `nutr-day-${day}`;
+      panel.className = "nutr-day-panel" + (idx !== 0 ? " hidden" : "");
+
+      const dayData = weekly[day];
+      const meals = Object.entries(MEAL_LABELS).map(([key, lbl]) => {
+        const meal = dayData[key];
+        if (!meal) return "";
+        const allergens = (meal.allergens_checked || []).join(", ") || "None";
+        return `
+          <div class="meal-block">
+            <div class="meal-header">
+              <span class="meal-label">${lbl}</span>
+              <span class="glycemic-badge gl-${(meal.glycemic_load || "").toLowerCase().replace(/[^a-z]/g,"")}">${meal.glycemic_load || ""}</span>
+            </div>
+            <p class="meal-desc">${meal.description}</p>
+            <div class="meal-ingredients">
+              ${(meal.ingredients || []).map(i => `<span class="ingredient-chip">${i}</span>`).join("")}
+            </div>
+            <div class="meal-allergens">🚫 Allergens checked: <em>${allergens}</em></div>
+          </div>`;
+      }).join("");
+
+      const expHtml = dayData.explanation ? `<div class="daily-explanation"><strong>💡 AI Note:</strong> ${dayData.explanation}</div>` : "";
+      panel.innerHTML = `<div class="meals-grid">${meals}</div>${expHtml}`;
+      contentEl.appendChild(panel);
     });
-    tabsEl.appendChild(btn);
+  }
 
-    // Day panel
-    const panel = document.createElement("div");
-    panel.id = `nutr-day-${day}`;
-    panel.className = "nutr-day-panel" + (idx !== 0 ? " hidden" : "");
-
-    const dayData = weekly[day];
-    const meals = Object.entries(MEAL_LABELS).map(([key, lbl]) => {
-      const meal = dayData[key];
-      if (!meal) return "";
-      const allergens = (meal.allergens_checked || []).join(", ") || "None";
-      return `
-        <div class="meal-block">
-          <div class="meal-header">
-            <span class="meal-label">${lbl}</span>
-            <span class="glycemic-badge gl-${(meal.glycemic_load || "").toLowerCase().replace(/[^a-z]/g,"")}">${meal.glycemic_load || ""}</span>
-          </div>
-          <p class="meal-desc">${meal.description}</p>
-          <div class="meal-ingredients">
-            ${(meal.ingredients || []).map(i => `<span class="ingredient-chip">${i}</span>`).join("")}
-          </div>
-          <div class="meal-allergens">🚫 Allergens checked: <em>${allergens}</em></div>
+  // Render Shopping List
+  const slContainer = el("nutr-shopping-list-container");
+  if (slContainer && plan.shopping_list && plan.shopping_list.length > 0) {
+    const categories = [...new Set(plan.shopping_list.map(i => i.category))];
+    let slHtml = `<div style="display:flex; flex-direction:column; gap:1rem;">`;
+    categories.forEach(cat => {
+      const items = plan.shopping_list.filter(i => i.category === cat);
+      slHtml += `
+        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:1rem;">
+          <h4 style="margin:0 0 0.5rem; color:var(--accent-hover);">${cat}</h4>
+          <ul style="margin:0; padding-left:1.5rem; color:var(--text-primary); font-size:0.9rem;">
+            ${items.map(i => `<li><strong>${i.item_name}</strong> <span style="color:var(--text-secondary); margin-left:0.5rem;">(Qtd: ${i.quantity})</span></li>`).join("")}
+          </ul>
         </div>`;
-    }).join("");
+    });
+    slHtml += `</div>`;
+    slContainer.innerHTML = slHtml;
+  }
 
-    const expHtml = dayData.explanation ? `<div class="daily-explanation"><strong>💡 AI Note:</strong> ${dayData.explanation}</div>` : "";
-    panel.innerHTML = `<div class="meals-grid">${meals}</div>${expHtml}`;
-    contentEl.appendChild(panel);
-  });
+  // Render Price Comparison Matrix
+  const pmContainer = el("nutr-price-matrix-container");
+  const pmNote = el("nutr-auditor-note-container");
+  if (pmContainer && plan.price_comparison && plan.price_comparison.items) {
+    const pc = plan.price_comparison;
+    let pcHtml = `<table class="results-table" style="width:100%; white-space:nowrap;">
+      <thead>
+        <tr>
+          <th>Ingrediente</th>
+          <th>Continente</th>
+          <th>Lidl</th>
+          <th>Mercadona</th>
+          <th>Celeiro</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${pc.items.map(i => `
+          <tr>
+            <td><strong>${i.ingredient}</strong></td>
+            <td>${i.continente_price}</td>
+            <td>${i.lidl_price}</td>
+            <td>${i.mercadona_price}</td>
+            <td>${i.celeiro_price}</td>
+          </tr>
+        `).join("")}
+      </tbody>
+      <tfoot>
+        <tr style="background:rgba(0,0,0,0.3); font-weight:bold;">
+          <td>TOTAL SEMANAL</td>
+          <td style="color:#10b981;">${pc.total_continente}</td>
+          <td style="color:#10b981;">${pc.total_lidl}</td>
+          <td style="color:#10b981;">${pc.total_mercadona}</td>
+          <td style="color:#10b981;">${pc.total_celeiro}</td>
+        </tr>
+      </tfoot>
+    </table>`;
+    pmContainer.innerHTML = pcHtml;
+
+    if (pmNote) {
+      pmNote.innerHTML = `<strong>🔬 Nota do Agente de Auditoria:</strong> ${pc.auditor_note}<br><br><span style="color:#f87171;">⚠️ ATENÇÃO: Verifique sempre o selo "Sem Glúten" e o preço impresso na etiqueta física da prateleira antes de efetuar o pagamento.</span>`;
+      pmNote.classList.remove("hidden");
+    }
+  }
 
   // Legal disclaimer
   const disc = (plan.metadata || {}).legal_disclaimer || "";
@@ -322,7 +387,17 @@ function downloadPlanCSV() {
 
 function normalizePdfText(str) {
   if (!str) return "";
-  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  let s = String(str);
+  s = s.replace(/[\u{1F600}-\u{1F64F}]/gu, '');
+  s = s.replace(/[\u{1F300}-\u{1F5FF}]/gu, '');
+  s = s.replace(/[\u{1F680}-\u{1F6FF}]/gu, '');
+  s = s.replace(/[\u{2600}-\u{26FF}]/gu, '');
+  s = s.replace(/[\u{2700}-\u{27BF}]/gu, '');
+  s = s.replace(/[\u{1F900}-\u{1F9FF}]/gu, '');
+  s = s.replace(/[\u{1FA70}-\u{1FAFF}]/gu, '');
+  s = s.replace(/⚠️/g, '');
+  s = s.replace(/[\u200B-\u200D\uFEFF]/g, '');
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
 function downloadPlanPDF() {
@@ -466,6 +541,79 @@ function downloadPlanPDF() {
     }
   });
   
+  // Shopping List
+  if (plan.shopping_list && plan.shopping_list.length > 0) {
+    if (finalY > 220) {
+      doc.addPage();
+      finalY = 20;
+    }
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.setTextColor(234, 88, 12); // Orange
+    doc.text("Shopping List", 14, finalY + 4);
+    
+    const slRows = plan.shopping_list.map(i => [normalizePdfText(i.category), normalizePdfText(i.item_name), normalizePdfText(i.quantity)]);
+    
+    doc.autoTable({
+      startY: finalY + 8,
+      head: [['Category', 'Item', 'Quantity']],
+      body: slRows,
+      theme: 'grid',
+      headStyles: { fillColor: [234, 88, 12], textColor: 255 },
+      styles: { fontSize: 9, cellPadding: 3, textColor: 60 },
+      pageBreak: 'auto'
+    });
+    finalY = doc.lastAutoTable.finalY + 8;
+  }
+
+  // Price Comparison Matrix
+  if (plan.price_comparison && plan.price_comparison.items && plan.price_comparison.items.length > 0) {
+    if (finalY > 220) {
+      doc.addPage();
+      finalY = 20;
+    }
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.setTextColor(16, 185, 129); // Green
+    doc.text("Price Comparison Matrix", 14, finalY + 4);
+    
+    const pc = plan.price_comparison;
+    const pcRows = pc.items.map(i => [
+      normalizePdfText(i.ingredient), 
+      normalizePdfText(i.continente_price), 
+      normalizePdfText(i.lidl_price), 
+      normalizePdfText(i.mercadona_price), 
+      normalizePdfText(i.celeiro_price)
+    ]);
+    pcRows.push([
+      'TOTAL', 
+      normalizePdfText(pc.total_continente), 
+      normalizePdfText(pc.total_lidl), 
+      normalizePdfText(pc.total_mercadona), 
+      normalizePdfText(pc.total_celeiro)
+    ]);
+    
+    doc.autoTable({
+      startY: finalY + 8,
+      head: [['Ingredient', 'Continente', 'Lidl', 'Mercadona', 'Celeiro']],
+      body: pcRows,
+      theme: 'grid',
+      headStyles: { fillColor: [16, 185, 129], textColor: 255 },
+      styles: { fontSize: 9, cellPadding: 3, textColor: 60 },
+      pageBreak: 'auto'
+    });
+    finalY = doc.lastAutoTable.finalY + 8;
+    
+    if (pc.auditor_note) {
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(9);
+      doc.setTextColor(217, 119, 6);
+      const noteText = doc.splitTextToSize("Auditor Note: " + normalizePdfText(pc.auditor_note), 180);
+      doc.text(noteText, 14, finalY);
+      finalY += (noteText.length * 4) + 6;
+    }
+  }
+
   // AI Dietary Reasoning Box
   if (sum.notes_explanation && sum.notes_explanation.trim() !== "") {
     if (finalY > 240) {
@@ -573,7 +721,7 @@ function startNutritionPipeline(urinalysis, bloodData, userId) {
   const mainGrid = el("nutr-main-grid");
   const rightPanel = el("nutr-right-panel");
   if (mainGrid && rightPanel) {
-    mainGrid.style.gridTemplateColumns = "minmax(350px, 1fr) minmax(400px, 1.2fr)";
+    mainGrid.style.gridTemplateColumns = "minmax(350px, 1fr) minmax(550px, 1.6fr)";
     rightPanel.style.display = "block";
     
     // Force reflow before applying opacity/transform

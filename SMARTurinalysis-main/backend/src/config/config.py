@@ -54,6 +54,10 @@ class Settings(BaseSettings):
 
     # Gemini Configuration
     GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+
+    # Market Updater Background Agent Settings
+    MARKET_UPDATER_INTERVAL_MINUTES: int = 10080 # Default: 7 Days (10080 minutes)
 
 # Instantiate settings
 settings = Settings()

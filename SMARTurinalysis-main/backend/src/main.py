@@ -17,10 +17,26 @@ from src.domains.nutritional_agents.ws_router import router as nutrition_ws_rout
 from src.shared.database import close_client
 
 
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from src.domains.nutritional_agents.background.market_updater import run_market_updater
+import logging
+
+logger = logging.getLogger("main")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application startup and shutdown lifecycle."""
+    
+    # Initialize and start background scheduler
+    scheduler = AsyncIOScheduler()
+    interval_minutes = settings.MARKET_UPDATER_INTERVAL_MINUTES
+    scheduler.add_job(run_market_updater, "interval", minutes=interval_minutes, id="market_updater_job")
+    scheduler.start()
+    logger.info(f"Background Market Updater scheduled to run every {interval_minutes} minutes.")
+    
     yield
+    
+    scheduler.shutdown()
     await close_client()
 
 from src.shared.middleware import JWTSessionMiddleware

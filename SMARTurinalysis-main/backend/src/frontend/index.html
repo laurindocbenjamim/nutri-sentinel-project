@@ -399,10 +399,19 @@
                         <p id="nutr-notes-explanation-text" style="font-size:0.95rem; color:var(--text-primary); line-height:1.5; margin:0;"></p>
                     </div>
 
-                    <!-- Weekly Plan Tabs -->
-                    <h3 style="font-size:0.9rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">7-Day Meal Plan</h3>
-                    <div id="nutr-day-tabs" style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:1rem;"></div>
-                    <div id="nutr-day-content"></div>
+                    <!-- Weekly Plan -->
+                    <h3 style="font-size:0.9rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">📅 7-Day Meal Plan</h3>
+                    <div id="nutr-day-tabs" class="day-tabs-container"></div>
+                    <div id="nutr-day-content" class="day-content-container" style="margin-bottom: 2rem;"></div>
+
+                    <!-- Shopping List -->
+                    <h3 style="font-size:0.9rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">🛒 Shopping List</h3>
+                    <div id="nutr-shopping-list-container" style="margin-bottom: 2rem;"></div>
+
+                    <!-- Price Comparison -->
+                    <h3 style="font-size:0.9rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">💰 Price Comparison Matrix</h3>
+                    <div id="nutr-price-matrix-container" style="overflow-x:auto; margin-bottom: 1rem;"></div>
+                    <div id="nutr-auditor-note-container" style="background:rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); padding: 1rem; border-radius: 8px; border-left: 4px solid #f59e0b; margin-bottom: 2rem; color: var(--text-primary); font-size: 0.9rem; line-height: 1.5;"></div>
 
                     <!-- Legal Disclaimer -->
                     <div style="margin-top:2rem;background:rgba(234,179,8,0.07);border:1px solid rgba(234,179,8,0.25);border-radius:8px;padding:1rem;font-size:0.8rem;line-height:1.6;color:var(--text-secondary);">
@@ -513,6 +522,6 @@
     <script src="scanner.js?v=1.0.3"></script>
     <script src="app.js?v=1.0.4"></script>
     <script src="blood.js?v=1.0.4"></script>
-    <script src="nutrition.js?v=1.0.17"></script>
+    <script src="nutrition.js?v=1.0.18"></script>
 </body>
 </html>

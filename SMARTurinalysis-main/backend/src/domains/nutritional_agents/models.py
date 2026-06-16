@@ -13,6 +13,11 @@ from pydantic import BaseModel, Field
 
 # ─── Enums ────────────────────────────────────────────────────────────────────
 
+class ShoppingCategory(str, Enum):
+    MEAT_FISH = "Talho, Peixaria e Ovos"
+    GROCERY = "Mercearia (Secção Sem Glúten)"
+    PRODUCE = "Frutaria e Legumes"
+
 class TriageStatus(str, Enum):
     CLEAR = "CLEAR"
     EMERGENCY_LOCK = "EMERGENCY_LOCK"
@@ -135,12 +140,37 @@ class AuditorEvaluation(BaseModel):
     rejection_reason: str = ""
 
 
+class ShoppingListItem(BaseModel):
+    item_name: str
+    quantity: str
+    category: ShoppingCategory
+
+
+class PriceComparisonItem(BaseModel):
+    ingredient: str
+    continente_price: str
+    lidl_price: str
+    mercadona_price: str
+    celeiro_price: str
+
+
+class PriceComparisonMatrix(BaseModel):
+    items: list[PriceComparisonItem]
+    total_continente: str
+    total_lidl: str
+    total_mercadona: str
+    total_celeiro: str
+    auditor_note: str
+
+
 class WeeklyPlanPayload(BaseModel):
     """Full inter-agent payload shared between Agent 3.D and Agent 4."""
     metadata: dict
     diet_summary: DietSummary
     financial_metrics: FinancialMetrics
     weekly_plan: dict[str, DailyPlan]
+    shopping_list: list[ShoppingListItem] = Field(default_factory=list)
+    price_comparison: Optional[PriceComparisonMatrix] = None
     auditor_evaluation: AuditorEvaluation = Field(
         default_factory=AuditorEvaluation
     )

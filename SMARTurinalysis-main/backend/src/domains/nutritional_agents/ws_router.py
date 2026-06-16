@@ -154,7 +154,7 @@ async def nutrition_ws(
                 "label": f"🍽️ Clinical Agent: Generating 7-day meal plan (attempt {attempt}/{_MAX_LOOPS})...",
                 "percent": 65 + (attempt - 1) * 8
             })
-            plan = clinical.structure_weekly_menu(
+            plan = await clinical.structure_weekly_menu(
                 urinalysis_data, profile, directives, attempt, blood_data, notes, fasting_protocol, language
             )
 
@@ -172,8 +172,15 @@ async def nutrition_ws(
 
         # ── Step 5: Final output ──────────────────────────────────────────────
         if approved_plan:
+            await _send(ws, "progress", {
+                "step": 6,
+                "label": f"🛒 Clinical Agent: Cross-referencing Supermarket prices & creating shopping list...",
+                "percent": 90
+            })
+            approved_plan = await clinical.generate_shopping_list_and_prices(approved_plan)
+
             _LEGAL = (
-                "⚠️ AVISO LEGAL: Este plano alimentar é gerado por IA e tem caráter meramente "
+                "AVISO LEGAL: Este plano alimentar é gerado por IA e tem caráter meramente "
                 "informativo. Não substitui a consulta com um médico ou nutricionista. "
                 "Verifique sempre os rótulos dos produtos no supermercado."
             )

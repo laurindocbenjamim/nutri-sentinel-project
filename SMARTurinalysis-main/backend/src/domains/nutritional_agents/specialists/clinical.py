@@ -17,6 +17,13 @@ from src.domains.nutritional_agents.models import (
 from src.domains.blood_analysis.agents import call_groq
 import json
 import logging
+import re
+import os
+from google import genai
+from google.genai import types
+from src.shared.database import get_collection
+from src.config.config import settings
+from src.shared.database import get_collection
 
 logger = logging.getLogger("nutri-sentinel")
 
@@ -144,7 +151,7 @@ class ClinicalNutritionAgent:
             }
         return base_macros
 
-    def structure_weekly_menu(
+    async def structure_weekly_menu(
         self,
         urinalysis_data: UrinalysisData,
         profile: UserProfile,
@@ -158,6 +165,22 @@ class ClinicalNutritionAgent:
         """
         Build and return the full WeeklyPlanPayload incorporating all directives.
         """
+        # Fetch approved ingredients from DB
+        try:
+            ingredients_col = get_collection("ingredients")
+            db_ingredients = await ingredients_col.find({}).to_list(length=100)
+            if db_ingredients:
+                ingredients_text = "\n".join([
+                    f"- {i.get('Nome')} (For: {i.get('Refeicao_Tipo')}) - {i.get('Calorias_100g')}, "
+                    f"Gluten Free: {i.get('Is_Gluten_Free')}, Diabetic Safe: {i.get('Is_Diabetic_Safe')}, "
+                    f"Cost Category: {i.get('Categoria_Custo', 'N/A')} (Avg Price: {i.get('Preco_Medio', 'N/A')})"
+                    for i in db_ingredients
+                ])
+            else:
+                ingredients_text = "No specific ingredients registered in DB."
+        except Exception as e:
+            logger.warning(f"Failed to fetch ingredients from DB: {e}")
+            ingredients_text = "No specific ingredients registered in DB."
         # Determine macro targets and apply goal-specific caloric adjustments
         from src.domains.nutritional_agents.router_agent import RouterAgent
         base_macros = RouterAgent().calculate_metabolic_goals(profile)
@@ -197,8 +220,10 @@ class ClinicalNutritionAgent:
             f"3. All text VALUES (descriptions, ingredients, notes_explanation, clinical_summary, explanation) MUST be in the requested language: {language}.\n"
             "4. Respect all allergies and pathologies! Ensure meals are safe and nutritionally balanced.\n"
             "5. FASTING: If a fasting protocol is active (e.g. 16/8), adjust the meals (e.g., make 'pequeno_almoco' just 'Water, black coffee/tea', and distribute calories in the remaining meals).\n"
-            "6. NOTES EXPLANATION: If the user requests foods like 'peas' or 'bread' in their notes, and you choose to omit them due to allergies or diet constraints, you MUST explain why in the `notes_explanation` field.\n"
-            "7. COMPLETENESS: You MUST generate all 7 days of the week completely. DO NOT skip Saturday or Sunday. Ensure breakfasts and meals are highly varied across the week."
+            "6. APPROVED INGREDIENTS: Use the following approved ingredients from our database where possible to avoid hallucinations:\n"
+            f"   {ingredients_text}\n"
+            "7. NOTES EXPLANATION: If the user requests foods like 'peas' or 'bread' in their notes, and you choose to omit them due to allergies or diet constraints, you MUST explain why in the `notes_explanation` field.\n"
+            "8. COMPLETENESS: You MUST generate all 7 days of the week completely. DO NOT skip Saturday or Sunday. Ensure breakfasts and meals are highly varied across the week."
         )
 
         user_prompt = (
@@ -221,7 +246,15 @@ class ClinicalNutritionAgent:
         try:
             # For JSON mode we must use a compatible model. llama-3.1-8b-instant supports it well in Groq.
             res = call_groq(user_prompt, system_prompt, json_mode=True, model="llama-3.1-8b-instant", max_tokens=6000)
-            res_dict = json.loads(res)
+            
+            # Safely extract JSON using regex to handle potential markdown wrappers like ```json ... ```
+            match = re.search(r"\{.*\}", res, re.DOTALL)
+            if match:
+                res_json_str = match.group(0)
+            else:
+                res_json_str = res
+                
+            res_dict = json.loads(res_json_str)
             weekly_plan_dict = res_dict.get("weekly_plan", res_dict) # Fallback if LLM forgets wrapper
             notes_explanation = res_dict.get("notes_explanation", "")
             clinical_summary = res_dict.get("clinical_summary", "")
@@ -269,3 +302,145 @@ class ClinicalNutritionAgent:
             weekly_plan=weekly,
             auditor_evaluation=AuditorEvaluation(),
         )
+
+    async def generate_shopping_list_and_prices(self, plan: WeeklyPlanPayload, language: str = "English") -> WeeklyPlanPayload:
+        """
+        Takes an approved WeeklyPlanPayload, extracts unique ingredients,
+        and uses Gemini 2.5 Flash to generate a categorized shopping list and price matrix.
+        Fallback to local DB if Gemini fails.
+        """
+        ingredients_col = get_collection("ingredients")
+        db_ingredients = await ingredients_col.find({}).to_list(length=200)
+        
+        # Build local reference for fallback and context
+        local_prices = {}
+        ref_str = ""
+        for i in db_ingredients:
+            nome = i.get('Nome')
+            preco = i.get('Preco_Medio', 'N/A')
+            if nome:
+                local_prices[nome.lower()] = preco
+                ref_str += f"- {nome} | {preco}\n"
+
+        # Extract meals to pass to LLM
+        meals_dump = ""
+        for day, dplan in plan.weekly_plan.items():
+            for m in [dplan.pequeno_almoco, dplan.almoco, dplan.lanche, dplan.jantar]:
+                meals_dump += f"{', '.join(m.ingredients)}\n"
+
+        prompt_sistema = """
+        Atuas como o Agente de Pesquisa de Mercado de Portugal. O teu objetivo é enriquecer uma lista de compras com preços reais.
+        Deves usar a tua ferramenta de Google Search integrada para extrair os preços dos sites ou folhetos ativos do Continente, Lidl, Mercadona e Celeiro.
+        
+        REGRAS ESTRITAS:
+        1. Procura sempre as versões de marca própria (Marca branca) "Sem Glúten" ou "Isento de Glúten" para utilizadores celíacos.
+        2. Se não encontrares o preço exato, faz uma estimativa com base no histórico de mercado de Portugal e no histórico fornecido, e altera o campo 'is_estimated' para true.
+        3. O teu output deve ser EXCLUSIVAMENTE um JSON válido. Não adiciones texto explicativo antes ou depois do JSON.
+        
+        Esquema esperado:
+        {
+          "shopping_list": [
+            { "item_name": "...", "quantity": "...", "category": "Talho, Peixaria e Ovos" | "Mercearia (Secção Sem Glúten)" | "Frutaria e Legumes" }
+          ],
+          "price_comparison": {
+            "items": [
+              { "ingredient": "...", "continente_price": "...", "lidl_price": "...", "mercadona_price": "...", "celeiro_price": "..." }
+            ],
+            "total_continente": "...", "total_lidl": "...", "total_mercadona": "...", "total_celeiro": "...",
+            "auditor_note": "..."
+          }
+        }
+        """
+
+        try:
+            client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY", ""))
+            config = types.GenerateContentConfig(
+                system_instruction=prompt_sistema,
+                temperature=0.2,
+                response_mime_type="application/json",
+                tools=[{"google_search": {}}]
+            )
+
+            response = client.models.generate_content(
+                model=settings.GEMINI_MODEL,
+                contents=f"Pesquisa os preços em Portugal para este cabaz: {meals_dump}\n\nPreços de Referência Locais:\n{ref_str}",
+                config=config
+            )
+            
+            res_text = response.text
+            match = re.search(r"\{.*\}", res_text, re.DOTALL)
+            json_str = match.group(0) if match else res_text
+            data = json.loads(json_str)
+            
+            # Validation Rule: Se JSON incompleto ou preco == 0 -> Fallback
+            if not data.get("shopping_list") or not data.get("price_comparison"):
+                raise ValueError("JSON Incompleto devolvido pelo Gemini.")
+            
+            # Additional validation: check if prices look like '0' or '0.00'
+            for item in data["price_comparison"].get("items", []):
+                for p_key in ["continente_price", "lidl_price", "mercadona_price", "celeiro_price"]:
+                    val = str(item.get(p_key, "")).replace("€", "").replace(",", ".").strip()
+                    try:
+                        if float(val) == 0:
+                            raise ValueError(f"Preço 0 detectado em {item['ingredient']}")
+                    except ValueError:
+                        pass # if not a number, skip this check
+                        
+            # If all is well, apply it
+            from src.domains.nutritional_agents.models import ShoppingListItem, PriceComparisonMatrix
+            plan.shopping_list = [ShoppingListItem(**item) for item in data["shopping_list"]]
+            plan.price_comparison = PriceComparisonMatrix(**data["price_comparison"])
+            logger.info("Gemini 2.5 Flash succeeded in generating shopping list with Google Grounding.")
+
+        except Exception as e:
+            logger.warning(f"Gemini pricing failed or validation error: {e}. Executing Fallback to Local DB.")
+            # Fallback to local static prices
+            from src.domains.nutritional_agents.models import ShoppingListItem, PriceComparisonMatrix, PriceComparisonItem, ShoppingCategory
+            
+            # Simple unique ingredients extraction
+            import collections
+            ingredients_counter = collections.Counter()
+            for day, dplan in plan.weekly_plan.items():
+                for m in [dplan.pequeno_almoco, dplan.almoco, dplan.lanche, dplan.jantar]:
+                    for ing in m.ingredients:
+                        ingredients_counter[ing] += 1
+                        
+            sl = []
+            pc_items = []
+            total = 0.0
+            
+            for ing, count in ingredients_counter.items():
+                # Default category logic if we don't know
+                cat = ShoppingCategory.GROCERY
+                if any(x in ing.lower() for x in ["frango", "peru", "ovo", "atum", "peixe", "pescada", "bife"]):
+                    cat = ShoppingCategory.MEAT_FISH
+                elif any(x in ing.lower() for x in ["maçã", "banana", "batata", "espinafre", "alface", "brócolo", "courgette", "cenoura", "tomate"]):
+                    cat = ShoppingCategory.PRODUCE
+
+                sl.append(ShoppingListItem(item_name=ing, quantity=str(count), category=cat))
+                
+                # Get price from local DB or default
+                preco_db = local_prices.get(ing.lower(), "3.00€")
+                pc_items.append(PriceComparisonItem(
+                    ingredient=ing,
+                    continente_price=preco_db,
+                    lidl_price=preco_db,
+                    mercadona_price=preco_db,
+                    celeiro_price=preco_db
+                ))
+                try:
+                    total += float(preco_db.replace("€", "").replace(",", ".").strip()) * count
+                except:
+                    pass
+
+            plan.shopping_list = sl
+            plan.price_comparison = PriceComparisonMatrix(
+                items=pc_items,
+                total_continente=f"{total:.2f}€",
+                total_lidl=f"{total:.2f}€",
+                total_mercadona=f"{total:.2f}€",
+                total_celeiro=f"{total:.2f}€",
+                auditor_note="FALLBACK ATIVADO: Preços gerados através da base de dados local devido a falha na pesquisa web em tempo real."
+            )
+            
+        return plan

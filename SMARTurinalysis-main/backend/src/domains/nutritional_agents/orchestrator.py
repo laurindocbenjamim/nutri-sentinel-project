@@ -24,7 +24,7 @@ _SAFE_FAILURE_MESSAGE = (
 )
 
 _LEGAL_DISCLAIMER = (
-    "⚠️ AVISO LEGAL: Este plano alimentar é gerado por IA e tem caráter meramente "
+    "AVISO LEGAL: Este plano alimentar é gerado por IA e tem caráter meramente "
     "informativo. Não substitui a consulta com um médico ou nutricionista. "
     "Verifique sempre os rótulos dos produtos no supermercado para confirmar a "
     "certificação 'Sem Glúten' e a ausência de alérgenos declarados."
@@ -76,7 +76,7 @@ class NutritionalOrchestrator:
         approved_plan: WeeklyPlanPayload | None = None
 
         for attempt in range(1, _MAX_LOOP_ITERATIONS + 1):
-            plan = self._clinical.structure_weekly_menu(
+            plan = await self._clinical.structure_weekly_menu(
                 urinalysis_data, profile, directives, loop_attempt=attempt
             )
             audit_result = self._auditor.audit(plan, profile, directives)
@@ -90,6 +90,9 @@ class NutritionalOrchestrator:
 
         # ── Stage 5: Final Output ─────────────────────────────────────────────
         if approved_plan:
+            # Generate Shopping List & Price Matrix
+            approved_plan = await self._clinical.generate_shopping_list_and_prices(approved_plan)
+            
             # Append legal disclaimer to metadata before delivery
             approved_plan.metadata["legal_disclaimer"] = _LEGAL_DISCLAIMER
             return NutritionPlanResponse(success=True, plan=approved_plan)
