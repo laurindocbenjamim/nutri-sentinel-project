@@ -31,7 +31,8 @@ def get_client() -> AsyncIOMotorClient:
             raise RuntimeError(
                 "MONGODB_URI is not set. Add it to your .env file."
             )
-        _client = AsyncIOMotorClient(settings.MONGODB_URI)
+        import certifi
+        _client = AsyncIOMotorClient(settings.MONGODB_URI, tlsCAFile=certifi.where())
     return _client
 
 
