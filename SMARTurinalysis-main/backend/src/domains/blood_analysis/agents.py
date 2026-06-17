@@ -50,7 +50,7 @@ def call_groq(prompt: str, system_prompt: str, json_mode: bool = False, model: s
     if json_mode:
         payload["response_format"] = {"type": "json_object"}
     try:
-        with httpx.Client(timeout=30.0) as client:
+        with httpx.Client(timeout=120.0) as client:
             response = client.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload)
             response.raise_for_status()
             return response.json()["choices"][0]["message"]["content"]

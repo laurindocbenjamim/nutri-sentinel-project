@@ -59,7 +59,6 @@ class Settings(BaseSettings):
     # Market Updater Background Agent Settings
     MARKET_UPDATER_INTERVAL_MINUTES: int = 10080 # Default: 7 Days (10080 minutes)
     MARKETS_TO_SEARCH: str = "continente, lidl, mercadona"
-    MARKET_UPDATER_SLEEP_SECONDS: int = 3
 
 # Instantiate settings
 settings = Settings()

@@ -272,7 +272,7 @@ class ClinicalNutritionAgent:
         except Exception as e:
             logger.error(f"LLM Diet Generation failed: {e}. Falling back to default templates.")
             weekly = _build_base_menu(directives, profile)
-            notes_explanation = "Erro ao gerar explicação personalizada (Fallback ativado)."
+            notes_explanation = f"Erro Técnico (Fallback ativado): A inteligência artificial não conseguiu gerar o plano. Motivo: {str(e)[:150]}"
             clinical_summary = ""
 
         estimated_cost = _WEEKLY_COST_ESTIMATES.get(profile.budget_tier, Decimal("70.00"))

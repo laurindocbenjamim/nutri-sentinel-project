@@ -104,7 +104,7 @@ async def update_prices():
             AGENT_STATUS["new_price"] = "Failed"
             
         # Add a sleep time after each search to prevent API rate limits
-        await asyncio.sleep(settings.MARKET_UPDATER_SLEEP_SECONDS)
+        await asyncio.sleep(3)
 
 async def search_new_certifications():
     """
