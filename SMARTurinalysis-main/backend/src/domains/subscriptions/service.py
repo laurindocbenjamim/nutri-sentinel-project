@@ -84,6 +84,5 @@ class SubscriptionService:
             return True
         except Exception as e:
             logger.error(f"Error checking quota for {user_uuid}: {e}")
-            # If DB fails, fail closed to prevent abuse, or fail open? Let's fail open (True) so we don't break the app if DB is down.
-            # But the requirement says "ask to upgrade". Failing open might bypass billing. Let's raise an exception.
-            raise HTTPException(status_code=500, detail="Could not verify subscription quota.")
+            # Fail open (True) so we don't break the app if the Supabase Postgres DB is paused or offline
+            return True
