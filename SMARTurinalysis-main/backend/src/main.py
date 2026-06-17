@@ -55,10 +55,13 @@ app = FastAPI(
 # Register JWT Session Middleware first for session tracking
 app.add_middleware(JWTSessionMiddleware)
 
+# Parse ALLOWED_ORIGINS string into a list
+allowed_origins = [origin.strip() for origin in settings.ALLOWED_ORIGINS.split(",")] if settings.ALLOWED_ORIGINS else ["*"]
+
 # CORS middleware for local frontend development support
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -76,12 +79,13 @@ async def init_session():
     session_id = str(uuid.uuid4())
     token = create_session_token({"session_id": session_id})
     response = JSONResponse(content={"status": "session_initialized"})
+    from src.config.config import settings
     response.set_cookie(
         key="session_token",
         value=token,
         httponly=True,
-        samesite="lax",
-        secure=False,
+        samesite="none" if settings.SECURE_COOKIE else "lax",
+        secure=settings.SECURE_COOKIE,
         path="/"
     )
     return response

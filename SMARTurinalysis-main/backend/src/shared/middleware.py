@@ -37,27 +37,22 @@ class JWTSessionMiddleware(BaseHTTPMiddleware):
             if payload:
                 session_valid = True
                 
-        # API request authorization
-        if path.startswith("/api/"):
-            if not session_valid:
-                return JSONResponse(
-                    status_code=401,
-                    content={"detail": "Unauthorized: Invalid or missing session token. Please reload the application."}
-                )
-            return await call_next(request)
-            
-        # For HTML pages and root access, automatically initialize session if missing
+        # Proceed with the request
         response = await call_next(request)
+        
+        # Automatically initialize session if missing
         if not session_valid:
             session_id = str(uuid.uuid4())
             new_token = create_session_token({"session_id": session_id})
+            
+            from src.config.config import settings
             
             response.set_cookie(
                 key="session_token",
                 value=new_token,
                 httponly=True,
-                samesite="lax",
-                secure=request.url.scheme == "https",
+                samesite="none" if settings.SECURE_COOKIE else "lax",
+                secure=settings.SECURE_COOKIE,
                 path="/"
             )
             
