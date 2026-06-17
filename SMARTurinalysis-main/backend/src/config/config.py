@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     # Cookie Security
     SECURE_COOKIE: bool = False
 
+    # CORS Configuration
+    ALLOWED_ORIGINS: str = "*"
+
     # MongoDB Configuration
     MONGODB_URI: str = ""
     MONGODB_DB_NAME: str = "nutrisentinel_agent_ai"
