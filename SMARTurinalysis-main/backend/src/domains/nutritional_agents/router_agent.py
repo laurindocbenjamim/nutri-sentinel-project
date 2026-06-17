@@ -9,6 +9,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from src.domains.nutritional_agents.models import UserProfile, BudgetTier
 from src.shared.database import get_collection
+from src.domains.subscriptions.database import AsyncSessionLocal
+from src.domains.subscriptions.models import UserPlan
+from sqlalchemy import select
 
 # Drugs known to mask or alter urinalysis readings (e.g., iSGLT2 causes glycosuria)
 _MASKING_MEDICATIONS = {"empagliflozin", "dapagliflozin", "canagliflozin", "isglt2"}
@@ -53,10 +56,26 @@ class RouterAgent:
         collection = get_collection("user_profiles")
         doc = await collection.find_one({"user_id": user_id}, {"_id": 0})
 
+        user_uuid = None
+        username = None
+        try:
+            async with AsyncSessionLocal() as session:
+                result = await session.execute(
+                    select(UserPlan).where((UserPlan.discord_id == user_id) | (UserPlan.user_uuid == user_id))
+                )
+                user_plan = result.scalars().first()
+                if user_plan:
+                    user_uuid = user_plan.user_uuid
+                    username = user_plan.username
+        except Exception:
+            pass
+
         if not doc:
             # Return a safe default profile when user is not yet in DB
             return UserProfile(
                 user_id=user_id,
+                user_uuid=user_uuid,
+                username=username,
                 age=30,
                 sex="M",
                 pathologies=[],
@@ -70,6 +89,8 @@ class RouterAgent:
 
         return UserProfile(
             user_id=doc.get("user_id", user_id),
+            user_uuid=user_uuid,
+            username=username,
             age=doc.get("age", 30),
             sex=doc.get("sex", "M"),
             pathologies=doc.get("pathologies", []),

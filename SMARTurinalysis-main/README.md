@@ -261,6 +261,72 @@ Open your browser and navigate to `http://127.0.0.1:8000` to access the interact
   }
   ```
 
+#### 5. Nutritional Agents Multi-Agent System
+- **Endpoint**: `POST /api/nutrition/plan`
+- **Description**: Evaluates urinalysis/blood biomarkers against a user's clinical profile to dynamically generate a 7-day personalized meal plan. It uses a Hub-and-Spoke and DAG Agent Orchestration model.
+- **Agent Roles**:
+  - **Agent 1 (Gatekeeper)**: Safety triaging. Blocks generation and throws an emergency lock if critical metabolic thresholds (e.g., ketoacidosis) are detected.
+  - **Agent 2 (Router)**: Context engine. Fetches the user profile and dynamically spins up necessary **Specialist Agents** (e.g., Autoimmune, Oncology, Pregnancy) based on user pathologies.
+  - **Agent 3 (Clinical Diet Builder)**: Consolidates specialist directives to build the 7-day meal plan. Replaces LLM-hallucinated prices with real-world prices using a fallback-aware Strategy pattern (Groq/Gemini).
+  - **Agent 4 (Auditor)**: Independent safety inspector. Validates the generated plan against allergies, budget ceilings, and zero-tolerance cross-contamination rules (e.g., hidden gluten).
+  - **Market Updater (Background Agent)**: Scrapes supermarket prices and new APC certifications asynchronously into MongoDB.
+- **Request Payload**:
+  ```json
+  {
+    "user_id": "test_user",
+    "urinalysis_data": {
+      "Glucose": "Negative",
+      "Ketone": "Negative",
+      "Protein": "Negative",
+      "Leukocytes": "Negative",
+      "Nitrite": "Negative",
+      "pHValue": 6.5,
+      "SpecificGravity": 1.015
+    }
+  }
+  ```
+- **Expected Response**:
+  ```json
+  {
+    "success": true,
+    "plan": {
+      "metadata": { "user_id": "test_user", "loop_attempt": 1 },
+      "diet_summary": {
+        "diet_type": "Isenta de Glúten",
+        "target_calories_kcal": 2000,
+        "macro_distribution": { "carbohydrates_g": 250, "proteins_g": 125, "fats_g": 55 }
+      },
+      "financial_metrics": { "estimated_weekly_cost_eur": "70.00" },
+      "weekly_plan": { "monday": { "pequeno_almoco": { "description": "...", "ingredients": [] } } },
+      "shopping_list": [ { "item_name": "Aveia", "quantity": "1", "category": "Mercearia" } ],
+      "price_comparison": { "total_continente": "12.50", "items": [] },
+      "auditor_evaluation": { "status": "APPROVED", "rejected_meals": [], "rejection_reason": "" }
+    },
+    "error": null,
+    "triage_alert": null
+  }
+  ```
+
+#### 6. System Agents Status
+- **Endpoint**: `GET /api/system/background-agents`
+- **Description**: Fetches the live status of the autonomous background agents (e.g., Market Updater) from MongoDB.
+- **Expected Response**:
+  ```json
+  {
+    "agents": [
+      {
+        "id": "market_updater_job",
+        "name": "Market Updater Job",
+        "status": "Running",
+        "next_run": "2026-06-17T13:00:00+00:00",
+        "action": "Scraping market prices",
+        "target": "Aveia",
+        "old_price": "2.50€",
+        "new_price": "Searching..."
+      }
+    ]
+  }
+  ```
 ---
 
 ## 📈 Future Investigations

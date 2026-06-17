@@ -21,19 +21,28 @@ import re
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../..")))
 
 from src.shared.database import get_collection, close_client
-from src.domains.blood_analysis.agents import call_groq
+from src.shared.llm_strategy import GroqStrategy
 from src.config.config import settings
 from duckduckgo_search import DDGS
+from datetime import datetime
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("market_updater")
 
-AGENT_STATUS = {
-    "action": "Idle",
-    "target": None,
-    "old_price": None,
-    "new_price": None
-}
+async def update_agent_status(action: str, target: str = None, old_price: str = None, new_price: str = None):
+    """Externalize agent state to MongoDB per architecture rules."""
+    col = get_collection("system_state")
+    await col.update_one(
+        {"agent": "market_updater"},
+        {"$set": {
+            "action": action,
+            "target": target,
+            "old_price": old_price,
+            "new_price": new_price,
+            "updated_at": datetime.utcnow()
+        }},
+        upsert=True
+    )
 
 async def update_prices():
     """
@@ -51,10 +60,7 @@ async def update_prices():
         logger.info(f"Searching web for: {query}")
         
         old_price_val = item.get("Preco_Medio", "N/A")
-        AGENT_STATUS["action"] = "Scraping market prices"
-        AGENT_STATUS["target"] = item['Nome']
-        AGENT_STATUS["old_price"] = old_price_val
-        AGENT_STATUS["new_price"] = "Searching..."
+        await update_agent_status("Scraping market prices", item['Nome'], old_price_val, "Searching...")
         
         try:
             # Get top 3 search results
@@ -78,7 +84,8 @@ async def update_prices():
 
             user_prompt = f"Product: {item['Nome']}\nSearch Results:\n{search_context}"
 
-            llm_res = call_groq(user_prompt, system_prompt, json_mode=True)
+            strategy = GroqStrategy()
+            llm_res = await strategy.generate_async(user_prompt, system_prompt, json_mode=True)
             match = re.search(r"\{.*\}", llm_res, re.DOTALL)
             json_str = match.group(0) if match else llm_res
             data = json.loads(json_str)
@@ -97,11 +104,11 @@ async def update_prices():
                 }}
             )
             logger.info(f"✅ Updated {item['Nome']}: {novo_preco} ({nova_categoria})")
-            AGENT_STATUS["new_price"] = novo_preco
+            await update_agent_status("Scraping market prices", item['Nome'], old_price_val, novo_preco)
 
         except Exception as e:
             logger.error(f"❌ Failed to update {item['Nome']}: {e}")
-            AGENT_STATUS["new_price"] = "Failed"
+            await update_agent_status("Scraping market prices", item['Nome'], old_price_val, "Failed")
             
         # Add a sleep time after each search to prevent API rate limits
         await asyncio.sleep(3)
@@ -136,7 +143,8 @@ async def search_new_certifications():
             "}"
         )
 
-        llm_res = call_groq(search_context, system_prompt, json_mode=True)
+        strategy = GroqStrategy()
+        llm_res = await strategy.generate_async(search_context, system_prompt, json_mode=True)
         match = re.search(r"\{.*\}", llm_res, re.DOTALL)
         json_str = match.group(0) if match else llm_res
         new_product = json.loads(json_str)
@@ -156,22 +164,13 @@ async def search_new_certifications():
 
 async def run_market_updater():
     logger.info("Starting Market Updater Agent (Background Service)...")
-    AGENT_STATUS["action"] = "Initializing Database"
-    AGENT_STATUS["target"] = None
-    AGENT_STATUS["old_price"] = None
-    AGENT_STATUS["new_price"] = None
+    await update_agent_status("Initializing Database")
     await update_prices()
     
-    AGENT_STATUS["action"] = "Searching new certifications"
-    AGENT_STATUS["target"] = "APC Gluten-Free Products"
-    AGENT_STATUS["old_price"] = None
-    AGENT_STATUS["new_price"] = None
+    await update_agent_status("Searching new certifications", "APC Gluten-Free Products")
     await search_new_certifications()
     
-    AGENT_STATUS["action"] = "Idle"
-    AGENT_STATUS["target"] = None
-    AGENT_STATUS["old_price"] = None
-    AGENT_STATUS["new_price"] = None
+    await update_agent_status("Idle")
     await close_client()
     logger.info("Market Updater Finished.")
 

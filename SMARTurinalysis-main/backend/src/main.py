@@ -87,7 +87,7 @@ async def init_session():
     return response
 
 from datetime import datetime
-from src.domains.nutritional_agents.background.market_updater import AGENT_STATUS
+from src.shared.database import get_collection
 
 @app.get("/api/system/background-agents")
 async def get_background_agents():
@@ -96,16 +96,22 @@ async def get_background_agents():
         return {"agents": []}
         
     agents = []
+    try:
+        col = get_collection("system_state")
+        agent_state = await col.find_one({"agent": "market_updater"}) or {}
+    except Exception:
+        agent_state = {}
+
     for job in scheduler.get_jobs():
         next_run = job.next_run_time.isoformat() if job.next_run_time else None
         # Provide a human-readable name based on job.id
         name = job.id.replace("_", " ").title()
         
         # Pull live status if it's the market updater
-        action = AGENT_STATUS.get("action", "Idle") if job.id == "market_updater_job" else "Idle"
-        target = AGENT_STATUS.get("target") if job.id == "market_updater_job" else None
-        old_price = AGENT_STATUS.get("old_price") if job.id == "market_updater_job" else None
-        new_price = AGENT_STATUS.get("new_price") if job.id == "market_updater_job" else None
+        action = agent_state.get("action", "Idle") if job.id == "market_updater_job" else "Idle"
+        target = agent_state.get("target") if job.id == "market_updater_job" else None
+        old_price = agent_state.get("old_price") if job.id == "market_updater_job" else None
+        new_price = agent_state.get("new_price") if job.id == "market_updater_job" else None
         
         agents.append({
             "id": job.id,

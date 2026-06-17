@@ -71,6 +71,8 @@ class UrinalysisData(BaseModel):
 class UserProfile(BaseModel):
     """Clinical and demographic profile retrieved from DB for a given user."""
     user_id: str
+    user_uuid: Optional[str] = None
+    username: Optional[str] = None
     age: int
     sex: str
     pathologies: list[str] = Field(default_factory=list)
@@ -148,18 +150,18 @@ class ShoppingListItem(BaseModel):
 
 class PriceComparisonItem(BaseModel):
     ingredient: str
-    continente_price: str
-    lidl_price: str
-    mercadona_price: str
-    celeiro_price: str
+    continente_price: Annotated[Decimal, Field(max_digits=7, decimal_places=2)]
+    lidl_price: Annotated[Decimal, Field(max_digits=7, decimal_places=2)]
+    mercadona_price: Annotated[Decimal, Field(max_digits=7, decimal_places=2)]
+    celeiro_price: Annotated[Decimal, Field(max_digits=7, decimal_places=2)]
 
 
 class PriceComparisonMatrix(BaseModel):
     items: list[PriceComparisonItem]
-    total_continente: str
-    total_lidl: str
-    total_mercadona: str
-    total_celeiro: str
+    total_continente: Annotated[Decimal, Field(max_digits=7, decimal_places=2)]
+    total_lidl: Annotated[Decimal, Field(max_digits=7, decimal_places=2)]
+    total_mercadona: Annotated[Decimal, Field(max_digits=7, decimal_places=2)]
+    total_celeiro: Annotated[Decimal, Field(max_digits=7, decimal_places=2)]
     auditor_note: str
 
 

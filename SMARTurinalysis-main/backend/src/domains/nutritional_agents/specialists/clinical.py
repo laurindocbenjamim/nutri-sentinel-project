@@ -14,16 +14,13 @@ from src.domains.nutritional_agents.models import (
     WeeklyPlanPayload, DietSummary, MacroDistribution,
     FinancialMetrics, AuditorEvaluation, BudgetTier, BudgetStatus, GlycemicLoad, FastingProtocol
 )
-from src.domains.blood_analysis.agents import call_groq
+from src.shared.llm_strategy import GroqStrategy, GeminiStrategy
 import json
 import logging
 import re
 import os
-from google import genai
-from google.genai import types
 from src.shared.database import get_collection
 from src.config.config import settings
-from src.shared.database import get_collection
 
 logger = logging.getLogger("nutri-sentinel")
 
@@ -245,7 +242,8 @@ class ClinicalNutritionAgent:
 
         try:
             # Use the configured LLM_MODEL instead of hardcoding, as more powerful models handle massive JSON schemas better.
-            res = call_groq(user_prompt, system_prompt, json_mode=True, model=settings.LLM_MODEL, max_tokens=6000)
+            strategy = GroqStrategy()
+            res = await strategy.generate_async(user_prompt, system_prompt, json_mode=True, model=settings.LLM_MODEL, max_tokens=6000)
             
             # Safely extract JSON using regex to handle potential markdown wrappers like ```json ... ```
             match = re.search(r"\{.*\}", res, re.DOTALL)
@@ -353,21 +351,17 @@ class ClinicalNutritionAgent:
         """
 
         try:
-            client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY", ""))
-            config = types.GenerateContentConfig(
-                system_instruction=prompt_sistema,
-                temperature=0.2,
-                response_mime_type="application/json",
-                tools=[{"google_search": {}}]
-            )
-
-            response = client.models.generate_content(
+            strategy = GeminiStrategy()
+            tools = [{"google_search": {}}]
+            
+            res_text = await strategy.generate_async(
+                prompt=f"Pesquisa os preços em Portugal para este cabaz: {meals_dump}\n\nPreços de Referência Locais:\n{ref_str}",
+                system_prompt=prompt_sistema,
+                json_mode=True,
                 model=settings.GEMINI_MODEL,
-                contents=f"Pesquisa os preços em Portugal para este cabaz: {meals_dump}\n\nPreços de Referência Locais:\n{ref_str}",
-                config=config
+                tools=tools
             )
             
-            res_text = response.text
             match = re.search(r"\{.*\}", res_text, re.DOTALL)
             json_str = match.group(0) if match else res_text
             data = json.loads(json_str)
@@ -389,6 +383,24 @@ class ClinicalNutritionAgent:
             # If all is well, apply it
             from src.domains.nutritional_agents.models import ShoppingListItem, PriceComparisonMatrix
             plan.shopping_list = [ShoppingListItem(**item) for item in data["shopping_list"]]
+            
+            # Convert strings to Decimal for PriceComparisonItem
+            for item in data["price_comparison"].get("items", []):
+                for p_key in ["continente_price", "lidl_price", "mercadona_price", "celeiro_price"]:
+                    val = str(item.get(p_key, "0")).replace("€", "").replace(",", ".").strip()
+                    try:
+                        item[p_key] = Decimal(val)
+                    except Exception:
+                        item[p_key] = Decimal("0.00")
+            
+            # Convert totals to Decimal
+            for p_key in ["total_continente", "total_lidl", "total_mercadona", "total_celeiro"]:
+                val = str(data["price_comparison"].get(p_key, "0")).replace("€", "").replace(",", ".").strip()
+                try:
+                    data["price_comparison"][p_key] = Decimal(val)
+                except Exception:
+                    data["price_comparison"][p_key] = Decimal("0.00")
+            
             plan.price_comparison = PriceComparisonMatrix(**data["price_comparison"])
             logger.info("Gemini 2.5 Flash succeeded in generating shopping list with Google Grounding.")
 
@@ -426,28 +438,32 @@ class ClinicalNutritionAgent:
                         if db_name in ing.lower() or ing.lower() in db_name:
                             preco_db = price
                             break
-                if not preco_db:
-                    preco_db = "3.00€"
-                    
+                preco_dec = Decimal("3.00")
+                if preco_db:
+                    try:
+                        preco_dec = Decimal(str(preco_db).replace("€", "").replace(",", ".").strip())
+                    except Exception:
+                        pass
+
                 pc_items.append(PriceComparisonItem(
                     ingredient=ing,
-                    continente_price=preco_db,
-                    lidl_price=preco_db,
-                    mercadona_price=preco_db,
-                    celeiro_price=preco_db
+                    continente_price=preco_dec,
+                    lidl_price=preco_dec,
+                    mercadona_price=preco_dec,
+                    celeiro_price=preco_dec
                 ))
                 try:
-                    total += float(preco_db.replace("€", "").replace(",", ".").strip()) * count
+                    total += float(preco_dec) * count
                 except:
                     pass
 
             plan.shopping_list = sl
             plan.price_comparison = PriceComparisonMatrix(
                 items=pc_items,
-                total_continente=f"{total:.2f}€",
-                total_lidl=f"{total:.2f}€",
-                total_mercadona=f"{total:.2f}€",
-                total_celeiro=f"{total:.2f}€",
+                total_continente=Decimal(f"{total:.2f}"),
+                total_lidl=Decimal(f"{total:.2f}"),
+                total_mercadona=Decimal(f"{total:.2f}"),
+                total_celeiro=Decimal(f"{total:.2f}"),
                 auditor_note="FALLBACK ATIVADO: Preços gerados através da base de dados local devido a falha na pesquisa web em tempo real."
             )
             

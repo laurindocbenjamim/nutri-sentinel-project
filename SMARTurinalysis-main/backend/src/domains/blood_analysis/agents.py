@@ -6,57 +6,22 @@ import base64
 import json
 import logging
 from pypdf import PdfReader
-import httpx
 from src.config.config import settings
+from src.shared.llm_strategy import GroqStrategy
 
 logger = logging.getLogger("nutri-sentinel")
 
 def call_groq(prompt: str, system_prompt: str, json_mode: bool = False, model: str = None, image_url: str = None, max_tokens: int = None) -> str:
-    """Calls Groq's Chat Completions API with support for text and vision models."""
-    if not settings.GROQ_API_KEY:
-        logger.warning("GROQ_API_KEY is not set. Returning mock JSON response.")
-        if json_mode:
-            return json.dumps({
-                "patient_name": "Laurindo Chiteculo Benjamim",
-                "report_date": "16-09-2025",
-                "biomarkers": [
-                    {"biomarker": "Glicose", "value": "85", "unit": "mg/dL", "reference_range": "60-110", "flag": "Normal"},
-                    {"biomarker": "Creatinina", "value": "1.09", "unit": "mg/dL", "reference_range": "0.60-1.20", "flag": "Normal"}
-                ]
-            })
-        return "Mock evaluation: Biomarkers are within healthy ranges."
-
-    headers = {"Authorization": f"Bearer {settings.GROQ_API_KEY}", "Content-Type": "application/json"}
-    selected_model = model or settings.LLM_MODEL or "llama-3.1-8b-instant"
-    
-    if image_url:
-        user_content = [
-            {"type": "text", "text": prompt},
-            {"type": "image_url", "image_url": {"url": image_url}}
-        ]
-    else:
-        user_content = prompt
-
-    payload = {
-        "model": selected_model,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_content}
-        ]
-    }
-    if max_tokens is not None:
-        payload["max_tokens"] = max_tokens
-
-    if json_mode:
-        payload["response_format"] = {"type": "json_object"}
-    try:
-        with httpx.Client(timeout=120.0) as client:
-            response = client.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload)
-            response.raise_for_status()
-            return response.json()["choices"][0]["message"]["content"]
-    except Exception as e:
-        logger.error(f"Error calling Groq API: {str(e)}")
-        raise
+    """Helper function to keep API backwards compatibility while using strategy pattern."""
+    strategy = GroqStrategy()
+    return strategy.generate_sync(
+        prompt=prompt,
+        system_prompt=system_prompt,
+        json_mode=json_mode,
+        model=model,
+        image_url=image_url,
+        max_tokens=max_tokens
+    )
 
 class Agent:
     def __init__(self, name: str, description: str, instruction: str, output_key: str):
