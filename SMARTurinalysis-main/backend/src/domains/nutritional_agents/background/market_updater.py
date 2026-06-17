@@ -171,7 +171,6 @@ async def run_market_updater():
     await search_new_certifications()
     
     await update_agent_status("Idle")
-    await close_client()
     logger.info("Market Updater Finished.")
 
 if __name__ == "__main__":
