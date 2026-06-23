@@ -179,154 +179,180 @@ Open your browser and navigate to `http://127.0.0.1:8000` to access the interact
 
 ### API Endpoints
 
-#### 1. Synthetic Image Generator
-- **Endpoint**: `POST /api/synthetic/generate`
-- **Description**: Generates a composite mock photo containing the reference card and urine stick.
-- **Request Payload**:
+### Complete API Endpoints Reference
+
+#### `POST /api/session/init`
+**Description:** Init Session
+
+**Expected Responses:**
+- **200**: Successful Response
+
+#### `GET /api/system/background-agents`
+**Description:** Get Background Agents
+
+**Expected Responses:**
+- **200**: Successful Response
+
+#### `POST /api/synthetic/generate`
+**Description:** Generate Images
+
+**Payload (application/json):**
+```json
+{
+  "selections": "object",
+  "eval_time": "any",
+}
+```
+
+**Expected Responses:**
+- **200**: Successful Response
+- **422**: Validation Error
   ```json
   {
-    "selections": {
-      "0": 3,
-      "1": 1
-    },
-    "eval_time": 60
-  }
-  ```
-  *Note:* `selections` maps analyte indices (0-9) to color indices (0-6). `eval_time` specifies the reaction time in seconds (30, 40, 45, 60, 120). Pad colors for analytes whose reaction times exceed `eval_time` are automatically held at the default/unreacted state (index 0).
-- **Expected Response**:
-  ```json
-  {
-    "success": true,
-    "mock_image_url": "/static/mock_photo.png",
-    "ref_card_url": "/static/RefCard.jpg",
-    "message": "Templates and mock photo generated successfully."
+    "detail": "array",
   }
   ```
 
-#### 2. Urinalysis Processing
-- **Endpoint**: `POST /api/analysis/upload`
-- **Description**: Uploads a raw camera image to align the stick and reference card, perform colorimetric analysis, and output results.
-- **Request Payload**: `Multipart/form-data` with key `file` containing the image.
-- **Expected Response**:
+#### `GET /api/synthetic/templates/card`
+**Description:** Get Ref Card
+
+**Expected Responses:**
+- **200**: Successful Response
+
+#### `GET /api/synthetic/templates/stick`
+**Description:** Get Urine Stick
+
+**Expected Responses:**
+- **200**: Successful Response
+
+#### `POST /api/analysis/upload`
+**Description:** Upload Image
+
+**Payload (multipart/form-data):**
+```json
+{
+  "file": "string",
+}
+```
+
+**Expected Responses:**
+- **200**: Successful Response
+- **422**: Validation Error
   ```json
   {
-    "success": true,
-    "aligned_card_url": "/static/aligned_card.png",
-    "aligned_stick_url": "/static/aligned_stick.png",
-    "results": {
-      "Glucose": "Negative",
-      "Bilirubin": "Negative",
-      "Ketone": "15 mg/dL",
-      "SpecificGravity": "1.015",
-      "Hemoglobin": "Negative",
-      "pHValue": "6.0",
-      "Protein": "Negative",
-      "Urobilinogen": "0.2 EU/dL",
-      "Nitrite": "Negative",
-      "Leukocytes": "Negative"
-    }
+    "detail": "array",
   }
   ```
 
-#### 3. Templates
-- `GET /api/synthetic/templates/card` - Returns the `RefCard.jpg` template image.
-- `GET /api/synthetic/templates/stick` - Returns the `UrineStick.jpg` template image.
+#### `POST /api/blood-analysis/upload`
+**Description:** Upload Blood Report
 
-#### 4. Blood Analysis OCR & Clinical Multi-Agent Pipeline
-- **Endpoint**: `POST /api/blood-analysis/upload`
-- **Description**: Accepts a PDF or image of a blood test report, processes it through a sequential multi-agent pipeline (Extraction -> Structuring -> Validation -> Evaluation), and returns clinical biomarker values, reference ranges, and nutritional recommendations. Uses Groq Llama 4 Scout for image visual OCR.
-- **Request Payload**: `Multipart/form-data` with key `file` containing the PDF/image.
-- **Expected Response**:
+**Payload (multipart/form-data):**
+```json
+{
+  "file": "string",
+  "user_uuid": "string",
+}
+```
+
+**Expected Responses:**
+- **200**: Successful Response
   ```json
   {
-    "patient_name": "Nuno Diogo Pereira Pinto Oliveira Lopes",
-    "report_date": "23-07-2024",
-    "biomarkers": [
-      {
-        "biomarker": "pH",
-        "value": "7.55",
-        "unit": "",
-        "reference_range": "5.0-9.0",
-        "flag": "Normal"
-      },
-      {
-        "biomarker": "Glicose",
-        "value": "Contém(++)",
-        "unit": "",
-        "reference_range": "",
-        "flag": "Abnormal"
-      }
-    ],
-    "recommendations": "Based on the provided blood report, the patient had several abnormal findings..."
+    "patient_name": "any",
+    "report_date": "any",
+    "biomarkers": "array",
+    "recommendations": "any",
+  }
+  ```
+- **422**: Validation Error
+  ```json
+  {
+    "detail": "array",
   }
   ```
 
-#### 5. Nutritional Agents Multi-Agent System
-- **Endpoint**: `POST /api/nutrition/plan`
-- **Description**: Evaluates urinalysis/blood biomarkers against a user's clinical profile to dynamically generate a 7-day personalized meal plan. It uses a Hub-and-Spoke and DAG Agent Orchestration model.
-- **Agent Roles**:
-  - **Agent 1 (Gatekeeper)**: Safety triaging. Blocks generation and throws an emergency lock if critical metabolic thresholds (e.g., ketoacidosis) are detected.
-  - **Agent 2 (Router)**: Context engine. Fetches the user profile and dynamically spins up necessary **Specialist Agents** (e.g., Autoimmune, Oncology, Pregnancy) based on user pathologies.
-  - **Agent 3 (Clinical Diet Builder)**: Consolidates specialist directives to build the 7-day meal plan. Replaces LLM-hallucinated prices with real-world prices using a fallback-aware Strategy pattern (Groq/Gemini).
-  - **Agent 4 (Auditor)**: Independent safety inspector. Validates the generated plan against allergies, budget ceilings, and zero-tolerance cross-contamination rules (e.g., hidden gluten).
-  - **Market Updater (Background Agent)**: Scrapes supermarket prices and new APC certifications asynchronously into MongoDB.
-- **Request Payload**:
+#### `POST /api/nutrition/plan`
+**Description:** Generate a personalized weekly nutrition plan
+
+**Payload (application/json):**
+```json
+{
+  "urinalysis_data": "any",
+  "user_id": "string",
+}
+```
+
+**Expected Responses:**
+- **200**: Successful Response
   ```json
   {
-    "user_id": "test_user",
-    "urinalysis_data": {
-      "Glucose": "Negative",
-      "Ketone": "Negative",
-      "Protein": "Negative",
-      "Leukocytes": "Negative",
-      "Nitrite": "Negative",
-      "pHValue": 6.5,
-      "SpecificGravity": 1.015
-    }
+    "success": "boolean",
+    "plan": "any",
+    "error": "any",
+    "triage_alert": "any",
   }
   ```
-- **Expected Response**:
+- **422**: Validation Error
   ```json
   {
-    "success": true,
-    "plan": {
-      "metadata": { "user_id": "test_user", "loop_attempt": 1 },
-      "diet_summary": {
-        "diet_type": "Isenta de Glúten",
-        "target_calories_kcal": 2000,
-        "macro_distribution": { "carbohydrates_g": 250, "proteins_g": 125, "fats_g": 55 }
-      },
-      "financial_metrics": { "estimated_weekly_cost_eur": "70.00" },
-      "weekly_plan": { "monday": { "pequeno_almoco": { "description": "...", "ingredients": [] } } },
-      "shopping_list": [ { "item_name": "Aveia", "quantity": "1", "category": "Mercearia" } ],
-      "price_comparison": { "total_continente": "12.50", "items": [] },
-      "auditor_evaluation": { "status": "APPROVED", "rejected_meals": [], "rejection_reason": "" }
-    },
-    "error": null,
-    "triage_alert": null
+    "detail": "array",
   }
   ```
 
-#### 6. System Agents Status
-- **Endpoint**: `GET /api/system/background-agents`
-- **Description**: Fetches the live status of the autonomous background agents (e.g., Market Updater) from MongoDB.
-- **Expected Response**:
+#### `GET /api/nutrition/status`
+**Description:** Nutritional agents subsystem health check
+
+**Expected Responses:**
+- **200**: Successful Response
+
+#### `GET /api/nutrition/profile/{user_id}`
+**Description:** Get User Clinical Profile
+
+**Expected Responses:**
+- **200**: Successful Response
   ```json
   {
-    "agents": [
-      {
-        "id": "market_updater_job",
-        "name": "Market Updater Job",
-        "status": "Running",
-        "next_run": "2026-06-17T13:00:00+00:00",
-        "action": "Scraping market prices",
-        "target": "Aveia",
-        "old_price": "2.50€",
-        "new_price": "Searching..."
-      }
-    ]
+    "user_id": "string",
+    "user_uuid": "any",
+    "username": "any",
+    "age": "integer",
+    "sex": "string",
+    "pathologies": "array",
+    "allergies": "array",
+    "medications": "array",
+    "pregnancy": "boolean",
+    "goal": "string",
+    "budget_tier": "any",
+    "activity_level": "string",
   }
   ```
+- **422**: Validation Error
+  ```json
+  {
+    "detail": "array",
+  }
+  ```
+
+#### `GET /api/nutrition/shopping-list`
+**Description:** Visualize a sample shopping list
+
+**Expected Responses:**
+- **200**: Successful Response
+
+#### `GET /api/nutrition/ingredients`
+**Description:** List all ingredients
+
+**Expected Responses:**
+- **200**: Successful Response
+- **422**: Validation Error
+  ```json
+  {
+    "detail": "array",
+  }
+  ```
+
+
 ---
 
 ## 📈 Future Investigations

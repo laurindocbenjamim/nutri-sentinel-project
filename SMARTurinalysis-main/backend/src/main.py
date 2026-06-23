@@ -4,8 +4,9 @@ Bootstrap server, configures CORS, Sentry, and serves the frontend.
 """
 
 import os
+import asyncio
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from src.config.config import settings, init_sentry
@@ -129,6 +130,44 @@ async def get_background_agents():
         })
         
     return {"agents": agents}
+
+@app.websocket("/api/system/ws/background-agents")
+async def ws_background_agents(websocket: WebSocket):
+    await websocket.accept()
+    try:
+        while True:
+            agents = []
+            try:
+                col = get_collection("system_state")
+                agent_state = await col.find_one({"agent": "market_updater"}) or {}
+            except Exception:
+                agent_state = {}
+
+            if "scheduler" in globals():
+                for job in scheduler.get_jobs():
+                    next_run = job.next_run_time.isoformat() if job.next_run_time else None
+                    name = job.id.replace("_", " ").title()
+                    
+                    action = agent_state.get("action", "Idle") if job.id == "market_updater_job" else "Idle"
+                    target = agent_state.get("target") if job.id == "market_updater_job" else None
+                    old_price = agent_state.get("old_price") if job.id == "market_updater_job" else None
+                    new_price = agent_state.get("new_price") if job.id == "market_updater_job" else None
+                    
+                    agents.append({
+                        "id": job.id,
+                        "name": name,
+                        "status": "Running" if action != "Idle" else "Idle",
+                        "next_run": next_run,
+                        "action": action,
+                        "target": target,
+                        "old_price": old_price,
+                        "new_price": new_price
+                    })
+            
+            await websocket.send_json({"agents": agents})
+            await asyncio.sleep(2)
+    except WebSocketDisconnect:
+        pass
 
 # Include Bounded Context Domain routers
 app.include_router(synthetic_router)
